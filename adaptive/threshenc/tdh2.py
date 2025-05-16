@@ -117,7 +117,7 @@ class TDHPublicKey(object):
         e = hashH(c, L, u, w, u1, w1)
         f = s + r * e
         C = (c, L, u, u1, e, f)
-        print("---> C >>>>>>>", C)
+        print("---> C >>>>>>> ENCRYPTED")
         return C
 
     def verify_ciphertext(self, cipher):
@@ -151,7 +151,7 @@ class TDHPublicKey(object):
         # print(type(hashG(res)))
         # print(type(c))
         m = xor(hashG(res).decode("ISO-8859-1"), c)
-        print("---> m >>>>>>>", m)
+        print("---> m >>>>>>> COMBINED")
         return m
 
 
@@ -170,7 +170,7 @@ class TDHPrivateKey(TDHPublicKey):
         e_i = hash4(u_i, u1_i, h1_i)
         f_i = si + self.SK * e_i
         S = (u_i, e_i, f_i)
-        print("---> S >>>>>>>", S)
+        print("---> S >>>>>>> DECRYPTED")
         return S
 
 

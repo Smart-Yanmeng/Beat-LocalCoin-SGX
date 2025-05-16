@@ -16,7 +16,127 @@ from .utils import makeCallOnce, \
 monkey.patch_all()
 
 
-def get_counter_result_from_sgx_brocast(host='127.0.0.1', port=65433, obj=None):
+def get_est1_from_sgx(host='127.0.0.1', port=65430, obj=None):
+    """
+    使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器
+    """
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((host, port))
+
+    try:
+        # 1. 序列化对象
+        serialized_data = pickle.dumps(obj)
+
+        # 2. 发送数据
+        client_socket.sendall(serialized_data)
+        client_socket.shutdown(socket.SHUT_WR)  # 通知服务端数据已发完
+
+        # 3. 接收完整响应（直到服务端关闭连接）
+        response_data = bytearray()
+        while True:
+            chunk = client_socket.recv(4096)
+            if not chunk:
+                break
+            response_data.extend(chunk)
+
+        # 4. 反序列化响应对象
+        return pickle.loads(response_data)
+
+    finally:
+        client_socket.close()
+
+
+def get_est2_from_sgx(host='127.0.0.1', port=65431, obj=None):
+    """
+    使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器
+    """
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((host, port))
+
+    try:
+        # 1. 序列化对象
+        serialized_data = pickle.dumps(obj)
+
+        # 2. 发送数据
+        client_socket.sendall(serialized_data)
+        client_socket.shutdown(socket.SHUT_WR)  # 通知服务端数据已发完
+
+        # 3. 接收完整响应（直到服务端关闭连接）
+        response_data = bytearray()
+        while True:
+            chunk = client_socket.recv(4096)
+            if not chunk:
+                break
+            response_data.extend(chunk)
+
+        # 4. 反序列化响应对象
+        return pickle.loads(response_data)
+
+    finally:
+        client_socket.close()
+
+
+def get_est3_from_sgx(host='127.0.0.1', port=65432, obj=None):
+    """
+    使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器
+    """
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((host, port))
+
+    try:
+        # 1. 序列化对象
+        serialized_data = pickle.dumps(obj)
+
+        # 2. 发送数据
+        client_socket.sendall(serialized_data)
+        client_socket.shutdown(socket.SHUT_WR)  # 通知服务端数据已发完
+
+        # 3. 接收完整响应（直到服务端关闭连接）
+        response_data = bytearray()
+        while True:
+            chunk = client_socket.recv(4096)
+            if not chunk:
+                break
+            response_data.extend(chunk)
+
+        # 4. 反序列化响应对象
+        return pickle.loads(response_data)
+
+    finally:
+        client_socket.close()
+
+
+def get_counter_result_from_sgx_broadcast(host='127.0.0.1', port=65433, obj=None):
+    """
+    使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器
+    """
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((host, port))
+
+    try:
+        # 1. 序列化对象
+        serialized_data = pickle.dumps(obj)
+
+        # 2. 发送数据
+        client_socket.sendall(serialized_data)
+        client_socket.shutdown(socket.SHUT_WR)  # 通知服务端数据已发完
+
+        # 3. 接收完整响应（直到服务端关闭连接）
+        response_data = bytearray()
+        while True:
+            chunk = client_socket.recv(4096)
+            if not chunk:
+                break
+            response_data.extend(chunk)
+
+        # 4. 反序列化响应对象
+        return pickle.loads(response_data)
+
+    finally:
+        client_socket.close()
+
+
+def get_counter_result_from_sgx_broadcast1(host='127.0.0.1', port=65434, obj=None):
     """
     使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器（不使用长度头）
     """
@@ -46,37 +166,7 @@ def get_counter_result_from_sgx_brocast(host='127.0.0.1', port=65433, obj=None):
         client_socket.close()
 
 
-def get_counter_result_from_sgx_brocast1(host='127.0.0.1', port=65434, obj=None):
-    """
-    使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器（不使用长度头）
-    """
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
-
-    try:
-        # 1. 序列化对象
-        serialized_data = pickle.dumps(obj)
-
-        # 2. 发送数据
-        client_socket.sendall(serialized_data)
-        client_socket.shutdown(socket.SHUT_WR)  # 通知服务端数据已发完
-
-        # 3. 接收完整响应（直到服务端关闭连接）
-        response_data = bytearray()
-        while True:
-            chunk = client_socket.recv(4096)
-            if not chunk:
-                break
-            response_data.extend(chunk)
-
-        # 4. 反序列化响应对象
-        return pickle.loads(response_data)
-
-    finally:
-        client_socket.close()
-
-
-def get_counter_result_from_sgx_brocast2(host='127.0.0.1', port=65435, obj=None):
+def get_counter_result_from_sgx_broadcast2(host='127.0.0.1', port=65435, obj=None):
     """
     使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器（不使用长度头）
     """
@@ -140,7 +230,7 @@ def reliable_broadcast(pid, N, t, broadcast, receive, output):
         broadcast(('i', pid, my_v))  # send phase / send tuple
 
         echos = [defaultdict(lambda: 0) for _ in range(N)]
-        # readyCounter = [defaultdict(default_zero) for _ in range(N)]
+        readyCounter = [defaultdict(default_zero) for _ in range(N)]
         readySent = [False] * N
         sentEcho = [False] * N
         result = {}
@@ -168,29 +258,32 @@ def reliable_broadcast(pid, N, t, broadcast, receive, output):
 
                 # print("msgObj", msgObj)
 
-                sgx_result = get_counter_result_from_sgx_brocast(obj=msgObj)
 
-                if sgx_result == 1 and not readySent[msgBundle[1]]:
-                    readySent[msgBundle[1]] = True
-                    broadcast(('r', msgBundle[1], msgBundle[2]))
-                elif sgx_result == 2:
-                    result[msgBundle[1]] = msgBundle[2]
-                    if len(result) == N:
-                        output(result)
-                        break
-
-                # readyCounter[msgBundle[1]][msgBundle[2]] += 1
-                # tmp = readyCounter[msgBundle[1]][msgBundle[2]]
+                ### todo: SGX
+                # sgx_result = get_counter_result_from_sgx_broadcast(obj=msgObj)
                 #
-                # if tmp >= t + 1 and not readySent[msgBundle[1]]:
+                # if sgx_result == 1 and not readySent[msgBundle[1]]:
                 #     readySent[msgBundle[1]] = True
                 #     broadcast(('r', msgBundle[1], msgBundle[2]))
-                #
-                # if tmp >= Threshold2:
+                # elif sgx_result == 2:
                 #     result[msgBundle[1]] = msgBundle[2]
                 #     if len(result) == N:
                 #         output(result)
                 #         break
+
+                ### todo: None-SGX
+                readyCounter[msgBundle[1]][msgBundle[2]] += 1
+                tmp = readyCounter[msgBundle[1]][msgBundle[2]]
+
+                if tmp >= t + 1 and not readySent[msgBundle[1]]:
+                    readySent[msgBundle[1]] = True
+                    broadcast(('r', msgBundle[1], msgBundle[2]))
+
+                if tmp >= Threshold2:
+                    result[msgBundle[1]] = msgBundle[2]
+                    if len(result) == N:
+                        output(result)
+                        break
 
     return Listener
 
@@ -203,7 +296,7 @@ def reliable_broadcast1(pid, N, t, broadcast, receive, output):
         broadcast(('i', pid, my_v))  # send phase
 
         echos = [defaultdict(lambda: 0) for _ in range(N)]
-        # readyCounter = [defaultdict(lambda: 0) for _ in range(N)]
+        readyCounter = [defaultdict(lambda: 0) for _ in range(N)]
         readySent = [False] * N
         sentEcho = [False] * N
         result = {}
@@ -222,38 +315,37 @@ def reliable_broadcast1(pid, N, t, broadcast, receive, output):
                     broadcast(('r', msgBundle[1], msgBundle[3]))
 
             elif msgBundle[0] == 'r':  # ready phase
-                # TODO: SGX PHASE
+                ### todo: SGX
                 msgObj = {
                     "t": t,
                     "msgBundle": msgBundle,
                     "Threshold2": Threshold2
                 }
 
-                # print("msgObj", msgObj)
-
-                sgx_result = get_counter_result_from_sgx_brocast1(obj=msgObj)
-
-                if sgx_result == 1 and not readySent[msgBundle[1]]:
-                    readySent[msgBundle[1]] = True
-                    broadcast(('r', msgBundle[1], msgBundle[2]))
-                elif sgx_result == 2:
-                    result[msgBundle[1]] = msgBundle[2]
-                    if len(result) == N:
-                        output(result)
-                        break
-
-                # readyCounter[msgBundle[1]][msgBundle[2]] += 1
-                # tmp = readyCounter[msgBundle[1]][msgBundle[2]]
+                # sgx_result = get_counter_result_from_sgx_broadcast1(obj=msgObj)
                 #
-                # if tmp >= t + 1 and not readySent[msgBundle[1]]:
+                # if sgx_result == 1 and not readySent[msgBundle[1]]:
                 #     readySent[msgBundle[1]] = True
                 #     broadcast(('r', msgBundle[1], msgBundle[2]))
-                #
-                # if tmp >= Threshold2:
+                # elif sgx_result == 2:
                 #     result[msgBundle[1]] = msgBundle[2]
                 #     if len(result) == N:
                 #         output(result)
                 #         break
+
+                ### todo: None-SGX
+                readyCounter[msgBundle[1]][msgBundle[2]] += 1
+                tmp = readyCounter[msgBundle[1]][msgBundle[2]]
+
+                if tmp >= t + 1 and not readySent[msgBundle[1]]:
+                    readySent[msgBundle[1]] = True
+                    broadcast(('r', msgBundle[1], msgBundle[2]))
+
+                if tmp >= Threshold2:
+                    result[msgBundle[1]] = msgBundle[2]
+                    if len(result) == N:
+                        output(result)
+                        break
 
     return Listener
 
@@ -266,7 +358,7 @@ def reliable_broadcast2(pid, N, t, broadcast, receive, output):
         broadcast(('i', pid, my_v))  # send phase
 
         echos = [defaultdict(lambda: 0) for _ in range(N)]
-        # readyCounter = [defaultdict(lambda: 0) for _ in range(N)]
+        readyCounter = [defaultdict(lambda: 0) for _ in range(N)]
         readySent = [False] * N
         sentEcho = [False] * N
         result = {}
@@ -294,29 +386,31 @@ def reliable_broadcast2(pid, N, t, broadcast, receive, output):
 
                 # print("msgObj", msgObj)
 
-                sgx_result = get_counter_result_from_sgx_brocast2(obj=msgObj)
-
-                if sgx_result == 1 and not readySent[msgBundle[1]]:
-                    readySent[msgBundle[1]] = True
-                    broadcast(('r', msgBundle[1], msgBundle[2]))
-                elif sgx_result == 2:
-                    result[msgBundle[1]] = msgBundle[2]
-                    if len(result) == N:
-                        output(result)
-                        break
-
-                # readyCounter[msgBundle[1]][msgBundle[2]] += 1
-                # tmp = readyCounter[msgBundle[1]][msgBundle[2]]
+                ### todo: SGX
+                # sgx_result = get_counter_result_from_sgx_broadcast2(obj=msgObj)
                 #
-                # if tmp >= t + 1 and not readySent[msgBundle[1]]:
+                # if sgx_result == 1 and not readySent[msgBundle[1]]:
                 #     readySent[msgBundle[1]] = True
                 #     broadcast(('r', msgBundle[1], msgBundle[2]))
-                #
-                # if tmp >= Threshold2:
+                # elif sgx_result == 2:
                 #     result[msgBundle[1]] = msgBundle[2]
                 #     if len(result) == N:
                 #         output(result)
                 #         break
+
+                ### todo: None-SGX
+                readyCounter[msgBundle[1]][msgBundle[2]] += 1
+                tmp = readyCounter[msgBundle[1]][msgBundle[2]]
+
+                if tmp >= t + 1 and not readySent[msgBundle[1]]:
+                    readySent[msgBundle[1]] = True
+                    broadcast(('r', msgBundle[1], msgBundle[2]))
+
+                if tmp >= Threshold2:
+                    result[msgBundle[1]] = msgBundle[2]
+                    if len(result) == N:
+                        output(result)
+                        break
 
     return Listener
 
@@ -570,6 +664,17 @@ def checkFinishedWithGlobalState(N):
 
 
 def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
+    """
+    :param instance:
+    :param pid:
+    :param N:
+    :param t:
+    :param vi: VOTE
+    :param decide:
+    :param broadcast:
+    :param receive:
+    :return:
+    """
     bcQB = defaultdict(lambda: Queue(1))
     bcQA = defaultdict(lambda: Queue(1))
     bcQC = defaultdict(lambda: Queue(1))
@@ -599,22 +704,22 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
 
     greenletPacker(Greenlet(_recv), 'local_binary_consensus._recv', (pid, N, t, vi, decide, broadcast, receive)).start()
 
+    def brcast_getA(r):
+        def _recv(*args, **kargs):
+            # todo: print get
+            test = bcQA[r].get(*args, **kargs)
+            print("test ---> ", test)
+            return test
+        return _recv
+
     def brcast_getB(r):
         def _recv(*args, **kargs):
             return bcQB[r].get(*args, **kargs)
-
-        return _recv
-
-    def brcast_getA(r):
-        def _recv(*args, **kargs):
-            return bcQA[r].get(*args, **kargs)
-
         return _recv
 
     def brcast_getC(r):
         def _recv(*args, **kargs):
             return bcQC[r].get(*args, **kargs)
-
         return _recv
 
     round = 0
@@ -629,11 +734,11 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
 
         bvOutputHolder = Queue(1)
 
-        # TODO: FROM SGX GET COIN
-
+        # todo: None-SGX
         s = random.choice([0, 1])
         print(f'[SGX] JUDGE COIN -> {s}')
 
+        ### todo: SGX
         # coin_greenlet = gevent.spawn(get_coin_from_sgx)
         # s = coin_greenlet.get()
 
@@ -655,24 +760,35 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
 
         br1.start()
         w = bvOutputHolder.get()
+        print(type(w))
 
-        # Calculate the majority in step 1------------
-        count_0 = 0
-        count_1 = 0
-        for key in w:
-            if w[key] == 0:
-                count_0 += 1
-            else:
-                count_1 += 1
+        ### todo: None-SGX
+        # count_0 = 0
+        # count_1 = 0
+        # for key in w:
+        #     # 强行决定 VOTE
+        #     # todo: 解密 VOTE
+        #     print("w[key] ----> ", w[key])
+        #     if w[key] == 0:
+        #         count_0 += 1
+        #     else:
+        #         count_1 += 1
+        #
+        # if count_0 > count_1:
+        #     est1 = 0
+        # elif count_1 > count_0:
+        #     est1 = 1
+        # else:
+        #     est1 = random.choice([0, 1])
+        # print("1--------------This is the est1--------", pid, est1)
 
-        if count_0 > count_1:
-            est1 = 0
-        elif count_1 > count_0:
-            est1 = 1
-        else:
-            est1 = random.choice([0, 1])
-            # est1 = get_coin_from_sgx()
-        print("1--------------This is the est1--------", pid, est1)
+        ### todo: SGX
+        voteObj1 = {
+            'voteObj1': w
+        }
+
+        est1 = get_est1_from_sgx(obj=voteObj1)
+
         ##########################################
         #################Step 2###################
         ##########################################
@@ -682,33 +798,41 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
             bvOutputHolder2.put(m)
 
         br2 = greenletPacker(Greenlet(
-            reliable_broadcast1(
-                pid, N, t, makeBroadcastWithTagAndRound('A', broadcast, round),
-                brcast_getA(round), bvOutput2),
-            est1), 'local_binary_consensus.reliable_broadcast(%d, %d, %d)' % (pid, N, t),
+            reliable_broadcast1(pid, N, t, makeBroadcastWithTagAndRound('A', broadcast, round), brcast_getA(round),
+                                bvOutput2), est1),
+            'local_binary_consensus.reliable_broadcast(%d, %d, %d)' % (pid, N, t),
             (pid, N, t, vi, decide, broadcast, receive))
 
         br2.start()
         w2 = bvOutputHolder2.get()
 
-        print("2----------------This the w2-------", pid, w2)
+        ### todo: None-SGX
+        # print("2----------------This the w2-------", pid, w2)
         # Calculate the majority in step 2------------
-        count_0_2 = 0
-        count_1_2 = 0
-        for key in w2:
-            if w2[key] == 0:
-                count_0_2 += 1
-            else:
-                count_1_2 += 1
+        # count_0_2 = 0
+        # count_1_2 = 0
+        # for key in w2:
+        #     if w2[key] == 0:
+        #         count_0_2 += 1
+        #     else:
+        #         count_1_2 += 1
+        #
+        # if count_0_2 > N / 2:
+        #     est2 = 0
+        # elif count_1_2 > N / 2:
+        #     est2 = 1
+        # else:
+        #     est2 = null
 
-        if count_0_2 > N / 2:
-            est2 = 0
-        elif count_1_2 > N / 2:
-            est2 = 1
-        else:
-            est2 = null
+        # print("3------------This is the est2--------", pid, est2)
 
-        print("3------------This is the est2--------", pid, est2)
+        ### todo: SGX
+        voteObj2 = {
+            'voteObj2': w2
+        }
+
+        est2 = get_est2_from_sgx(obj=voteObj2)
+
         ##########################################
         #################Step 3###################
         ##########################################
@@ -727,6 +851,8 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
         br3.start()
         w3 = bvOutputHolder3.get()
 
+
+        ### todo: None-SGX
         count_0_3 = 0
         count_1_3 = 0
         for key in w3:
@@ -757,7 +883,8 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
             est = v
         else:
             # gevent.sleep(1)
-            est = coin_greenlet.get()  # 随机值
+            est = random.choice([0, 1])
+            # est = coin_greenlet.get()  # 从 SGX 取得随机值
 
 
 def binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):

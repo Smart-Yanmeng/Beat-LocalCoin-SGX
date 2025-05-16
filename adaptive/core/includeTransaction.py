@@ -465,22 +465,21 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
 
         label = "1"
 
-        msgObj = {
-            "aesKey": aesKey,
-            "selected_B": b''.join(selected_B)
-        }
+        ### todo: SGX
+        # msgObj = {
+        #     "aesKey": aesKey,
+        #     "selected_B": b''.join(selected_B)
+        # }
 
-        print(msgObj)
+        # encrypted_B = get_encrypted_B_from_SGX(obj=msgObj)
 
-        # todo: get encrypted message from SGX
-        encrypted_B = get_encrypted_B_from_SGX(obj=msgObj)
-
-        # encrypted_B = encrypt(aesKey, b''.join(selected_B))
+        ### todo: None-SGX
+        encrypted_B = encrypt(aesKey, b''.join(selected_B))
 
         encryptedAESKey = encPK.encrypt(aesKey, label)
         proposal = serializeEnc(encryptedAESKey).encode("ISO-8859-1") + encrypted_B
 
-        print(proposal)
+        # print(proposal)
 
         # print(len(proposal.decode("ISO-8859-1")))
         mylog("timestampIB (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
@@ -499,12 +498,12 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
             if c:
                 one, two, three, four, five, six = deserializeEnc(proposals[i][:ENC_SERIALIZED_LENGTH])
                 print("----> ENC <----")
-                print(one)
-                print(two)
-                print(three)
-                print(four)
-                print(five)
-                print(six)
+                # print(one)
+                # print(two)
+                # print(three)
+                # print(four)
+                # print(five)
+                # print(six)
                 # share = encSKs[pid].decrypt_share(deserializeEnc(proposals[i][:ENC_SERIALIZED_LENGTH]))
                 share = encSKs[pid].decrypt_share(one, two, three, four, five, six)
                 broadcast(('O', i, share))

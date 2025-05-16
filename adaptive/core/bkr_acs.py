@@ -2,8 +2,6 @@ from gevent import monkey
 
 monkey.patch_all()
 
-# from .broadcasts import initBeforeBinaryConsensus, cobalt_binary_consensus, binary_consensus, fast_binary_consensus, \
-#     local_binary_consensus
 from .broadcasts import initBeforeBinaryConsensus, local_binary_consensus, binary_consensus,fast_binary_consensus
 from .utils import myRandom as random
 from gevent import Greenlet
@@ -39,8 +37,11 @@ def acs(pid, N, t, Q, broadcast, receive):
                 if len(receivedChannelsFlags) >= N - t:
                     locker2.put("Key")
                 if version == 1:
+                    # 提出提案并加密提案
+                    vote = "abc"
+
                     greenletPacker(Greenlet(local_binary_consensus, i, pid,
-                                            N, t, 0, decideChannel[i], make_bc(i),
+                                            N, t, vote, decideChannel[i], make_bc(i),
                                             reliableBroadcastReceiveQueue[i].get),
                                    'acs.callbackFactory.binary_consensus', (pid, N, t, Q, broadcast, receive)).start()
                 # if version == 2:
@@ -51,7 +52,7 @@ def acs(pid, N, t, Q, broadcast, receive):
                 #                    (pid, N, t, Q, broadcast, receive)).start()
                 if version == 2:
                     greenletPacker(Greenlet(binary_consensus, i, pid,
-                                            N, t, 1, decideChannel[i], make_bc(i), reliableBroadcastReceiveQueue[i].get),
+                                            N, t, vote, decideChannel[i], make_bc(i), reliableBroadcastReceiveQueue[i].get),
                                    'acs.callbackFactory.binary_consensus', (pid, N, t, Q, broadcast, receive)).start()
 
                 # elif version == 4:
@@ -179,8 +180,7 @@ def random_delay_acs(N, t, inputs):
             gevent.joinall(ts)
             break
         except gevent.hub.LoopExit:  # Manual fix for early stop
-            print
-            "End"
+            print("End")
 
 
 if __name__ == '__main__':

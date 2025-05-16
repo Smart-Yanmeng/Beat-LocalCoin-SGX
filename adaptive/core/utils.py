@@ -208,7 +208,6 @@ def deepEncode(mc, m):
             # print("t2=", t2) # t2=B
             if t2 == 'B': #广播,内层消息类型
                 buf.write(b'\x03')
-                print("buf.write 03 okkkkkkkkk")
             elif t2 == 'A': #Aux?
                 buf.write(b'\x04')
             elif t2 == 'F':
