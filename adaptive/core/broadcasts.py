@@ -258,7 +258,6 @@ def reliable_broadcast(pid, N, t, broadcast, receive, output):
 
                 # print("msgObj", msgObj)
 
-
                 ### todo: SGX
                 # sgx_result = get_counter_result_from_sgx_broadcast(obj=msgObj)
                 #
@@ -710,16 +709,19 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
             test = bcQA[r].get(*args, **kargs)
             print("test ---> ", test)
             return test
+
         return _recv
 
     def brcast_getB(r):
         def _recv(*args, **kargs):
             return bcQB[r].get(*args, **kargs)
+
         return _recv
 
     def brcast_getC(r):
         def _recv(*args, **kargs):
             return bcQC[r].get(*args, **kargs)
+
         return _recv
 
     round = 0
@@ -808,7 +810,6 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
 
         ### todo: None-SGX
         # print("2----------------This the w2-------", pid, w2)
-        # Calculate the majority in step 2------------
         # count_0_2 = 0
         # count_1_2 = 0
         # for key in w2:
@@ -828,6 +829,7 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
 
         ### todo: SGX
         voteObj2 = {
+            'n': N,
             'voteObj2': w2
         }
 
@@ -850,7 +852,6 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
 
         br3.start()
         w3 = bvOutputHolder3.get()
-
 
         ### todo: None-SGX
         count_0_3 = 0
