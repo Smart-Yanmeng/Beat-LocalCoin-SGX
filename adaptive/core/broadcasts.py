@@ -1,5 +1,4 @@
 # coding=utf-8
-import gevent
 from gevent import Greenlet, socket, monkey
 from gevent.queue import Queue
 from collections import defaultdict
@@ -259,30 +258,30 @@ def reliable_broadcast(pid, N, t, broadcast, receive, output):
                 # print("msgObj", msgObj)
 
                 ### todo: SGX
-                # sgx_result = get_counter_result_from_sgx_broadcast(obj=msgObj)
-                #
-                # if sgx_result == 1 and not readySent[msgBundle[1]]:
-                #     readySent[msgBundle[1]] = True
-                #     broadcast(('r', msgBundle[1], msgBundle[2]))
-                # elif sgx_result == 2:
-                #     result[msgBundle[1]] = msgBundle[2]
-                #     if len(result) == N:
-                #         output(result)
-                #         break
+                sgx_result = get_counter_result_from_sgx_broadcast(obj=msgObj)
 
-                ### todo: None-SGX
-                readyCounter[msgBundle[1]][msgBundle[2]] += 1
-                tmp = readyCounter[msgBundle[1]][msgBundle[2]]
-
-                if tmp >= t + 1 and not readySent[msgBundle[1]]:
+                if sgx_result == 1 and not readySent[msgBundle[1]]:
                     readySent[msgBundle[1]] = True
                     broadcast(('r', msgBundle[1], msgBundle[2]))
-
-                if tmp >= Threshold2:
+                elif sgx_result == 2:
                     result[msgBundle[1]] = msgBundle[2]
                     if len(result) == N:
                         output(result)
                         break
+
+                ### todo: None-SGX
+                # readyCounter[msgBundle[1]][msgBundle[2]] += 1
+                # tmp = readyCounter[msgBundle[1]][msgBundle[2]]
+                #
+                # if tmp >= t + 1 and not readySent[msgBundle[1]]:
+                #     readySent[msgBundle[1]] = True
+                #     broadcast(('r', msgBundle[1], msgBundle[2]))
+                #
+                # if tmp >= Threshold2:
+                #     result[msgBundle[1]] = msgBundle[2]
+                #     if len(result) == N:
+                #         output(result)
+                #         break
 
     return Listener
 
@@ -321,30 +320,30 @@ def reliable_broadcast1(pid, N, t, broadcast, receive, output):
                     "Threshold2": Threshold2
                 }
 
-                # sgx_result = get_counter_result_from_sgx_broadcast1(obj=msgObj)
-                #
-                # if sgx_result == 1 and not readySent[msgBundle[1]]:
-                #     readySent[msgBundle[1]] = True
-                #     broadcast(('r', msgBundle[1], msgBundle[2]))
-                # elif sgx_result == 2:
-                #     result[msgBundle[1]] = msgBundle[2]
-                #     if len(result) == N:
-                #         output(result)
-                #         break
+                sgx_result = get_counter_result_from_sgx_broadcast1(obj=msgObj)
 
-                ### todo: None-SGX
-                readyCounter[msgBundle[1]][msgBundle[2]] += 1
-                tmp = readyCounter[msgBundle[1]][msgBundle[2]]
-
-                if tmp >= t + 1 and not readySent[msgBundle[1]]:
+                if sgx_result == 1 and not readySent[msgBundle[1]]:
                     readySent[msgBundle[1]] = True
                     broadcast(('r', msgBundle[1], msgBundle[2]))
-
-                if tmp >= Threshold2:
+                elif sgx_result == 2:
                     result[msgBundle[1]] = msgBundle[2]
                     if len(result) == N:
                         output(result)
                         break
+
+                ### todo: None-SGX
+                # readyCounter[msgBundle[1]][msgBundle[2]] += 1
+                # tmp = readyCounter[msgBundle[1]][msgBundle[2]]
+                #
+                # if tmp >= t + 1 and not readySent[msgBundle[1]]:
+                #     readySent[msgBundle[1]] = True
+                #     broadcast(('r', msgBundle[1], msgBundle[2]))
+                #
+                # if tmp >= Threshold2:
+                #     result[msgBundle[1]] = msgBundle[2]
+                #     if len(result) == N:
+                #         output(result)
+                #         break
 
     return Listener
 
@@ -386,30 +385,30 @@ def reliable_broadcast2(pid, N, t, broadcast, receive, output):
                 # print("msgObj", msgObj)
 
                 ### todo: SGX
-                # sgx_result = get_counter_result_from_sgx_broadcast2(obj=msgObj)
-                #
-                # if sgx_result == 1 and not readySent[msgBundle[1]]:
-                #     readySent[msgBundle[1]] = True
-                #     broadcast(('r', msgBundle[1], msgBundle[2]))
-                # elif sgx_result == 2:
-                #     result[msgBundle[1]] = msgBundle[2]
-                #     if len(result) == N:
-                #         output(result)
-                #         break
+                sgx_result = get_counter_result_from_sgx_broadcast2(obj=msgObj)
 
-                ### todo: None-SGX
-                readyCounter[msgBundle[1]][msgBundle[2]] += 1
-                tmp = readyCounter[msgBundle[1]][msgBundle[2]]
-
-                if tmp >= t + 1 and not readySent[msgBundle[1]]:
+                if sgx_result == 1 and not readySent[msgBundle[1]]:
                     readySent[msgBundle[1]] = True
                     broadcast(('r', msgBundle[1], msgBundle[2]))
-
-                if tmp >= Threshold2:
+                elif sgx_result == 2:
                     result[msgBundle[1]] = msgBundle[2]
                     if len(result) == N:
                         output(result)
                         break
+
+                ### todo: None-SGX
+                # readyCounter[msgBundle[1]][msgBundle[2]] += 1
+                # tmp = readyCounter[msgBundle[1]][msgBundle[2]]
+                #
+                # if tmp >= t + 1 and not readySent[msgBundle[1]]:
+                #     readySent[msgBundle[1]] = True
+                #     broadcast(('r', msgBundle[1], msgBundle[2]))
+                #
+                # if tmp >= Threshold2:
+                #     result[msgBundle[1]] = msgBundle[2]
+                #     if len(result) == N:
+                #         output(result)
+                #         break
 
     return Listener
 
@@ -707,7 +706,6 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
         def _recv(*args, **kargs):
             # todo: print get
             test = bcQA[r].get(*args, **kargs)
-            print("test ---> ", test)
             return test
 
         return _recv
@@ -737,8 +735,8 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
         bvOutputHolder = Queue(1)
 
         # todo: None-SGX
-        s = random.choice([0, 1])
-        print(f'[SGX] JUDGE COIN -> {s}')
+        # s = random.choice([0, 1])
+        # print(f'[SGX] JUDGE COIN -> {s}')
 
         ### todo: SGX
         # coin_greenlet = gevent.spawn(get_coin_from_sgx)
@@ -824,7 +822,7 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
         #     est2 = 1
         # else:
         #     est2 = null
-
+        #
         # print("3------------This is the est2--------", pid, est2)
 
         ### todo: SGX
@@ -854,38 +852,71 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
         w3 = bvOutputHolder3.get()
 
         ### todo: None-SGX
-        count_0_3 = 0
-        count_1_3 = 0
-        for key in w3:
-            if w3[key] == 0:
-                v = w3[key]
-                count_0_3 += 1
-            else:
-                v = w3[key]
-                count_1_3 += 1
+        # count_0_3 = 0
+        # count_1_3 = 0
+        # for key in w3:
+        #     if w3[key] == 0:
+        #         v = w3[key]
+        #         count_0_3 += 1
+        #     else:
+        #         v = w3[key]
+        #         count_1_3 += 1
+        #
+        # if count_1_3 >= 2 * t + 1 and v != null:
+        #     globalState[pid] = "%d" % v
+        #     decide.put(v)
+        #     decided = True
+        #     decidedNum = v
+        #     if pid == 0:
+        #         print("[PID: %d] Decided on value: %d, round: %d" % (pid, v, round))
+        # elif count_0_3 >= 2 * t + 1 and v != null:
+        #     globalState[pid] = "%d" % v
+        #     decide.put(v)
+        #     decided = True
+        #     decidedNum = v
+        #     if pid == 0:
+        #         print("[PID: %d] Decided on value: %d, round: %d" % (pid, v, round))
+        # elif count_0_3 >= t + 1 and v != null:
+        #     est = v
+        # elif count_1_3 >= t + 1 and v != null:
+        #     est = v
+        # else:
+        #     # gevent.sleep(1)
+        #     est = random.choice([0, 1])
+        #     # est = coin_greenlet.get()  # 从 SGX 取得随机值
 
-        if count_1_3 >= 2 * t + 1 and v != null:
+        ### todo: SGX
+        voteObj3 = {
+            'voteObj3': w3,
+            't': t
+        }
+
+        countResultFromSGX = get_est3_from_sgx(obj=voteObj3)
+        v = countResultFromSGX['v']
+
+        if countResultFromSGX['result'] == 1 and v != null:
             globalState[pid] = "%d" % v
             decide.put(v)
             decided = True
             decidedNum = v
             if pid == 0:
                 print("[PID: %d] Decided on value: %d, round: %d" % (pid, v, round))
-        elif count_0_3 >= 2 * t + 1 and v != null:
+        elif countResultFromSGX['result'] == 2 and v != null:
             globalState[pid] = "%d" % v
             decide.put(v)
             decided = True
             decidedNum = v
             if pid == 0:
                 print("[PID: %d] Decided on value: %d, round: %d" % (pid, v, round))
-        elif count_0_3 >= t + 1 and v != null:
+        elif countResultFromSGX['result'] == 3 and v != null:
             est = v
-        elif count_1_3 >= t + 1 and v != null:
+        elif countResultFromSGX['result'] == 4 and v != null:
             est = v
         else:
             # gevent.sleep(1)
-            est = random.choice([0, 1])
-            # est = coin_greenlet.get()  # 从 SGX 取得随机值
+            # est = random.choice([0, 1])
+            est = countResultFromSGX['coin']  # 从 SGX 取得随机值
+
 
 
 def binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):

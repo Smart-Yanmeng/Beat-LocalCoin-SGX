@@ -45,6 +45,8 @@ def handle_client(conn):
         readyCounter[msgBundle[1]][msgBundle[2]] += 1
         tmp = readyCounter[msgBundle[1]][msgBundle[2]]
 
+        print("[SGX] COUNTER-1 -> ", tmp)
+
         if tmp >= t + 1:
             result = 1
         if tmp >= threshold2:

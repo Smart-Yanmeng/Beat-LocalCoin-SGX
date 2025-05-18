@@ -1,3 +1,4 @@
+import random
 from collections import defaultdict
 
 from gevent import socket, monkey
@@ -8,11 +9,19 @@ monkey.patch_all()
 import pickle
 
 HOST = '127.0.0.1'
-PORT = 65433
+PORT = 65432
 
 
 def handle_client(conn):
-    result = 0
+    counter0 = 0
+    counter1 = 0
+
+    result = {
+        "v": 0,
+        "result": 0,
+        "coin": 0
+    }
+
     try:
         # 接收全部数据，直到连接关闭
         data = bytearray()
@@ -23,20 +32,40 @@ def handle_client(conn):
             data.extend(chunk)
 
         if not data:
-            print("未收到任何数据")
+            print("[SGX] 未收到任何数据")
             return
 
         # 反序列化对象
         obj = pickle.loads(data)
-        print("收到对象：", obj)
+        print("[SGX] 收到对象：", obj)
 
         # 模拟 SGX 处理逻辑
+        voteObj3 = obj.get("voteObj3", dict())
         t = obj.get("t", 0)
+
+        for key in voteObj3:
+            if voteObj3[key] == 0:
+                result['v'] = voteObj3[key]
+                counter0 += 1
+            else:
+                result['v'] = voteObj3[key]
+                counter1 += 1
+
+        if counter1 >= 2 * t + 1:
+            result['result'] = 1
+        elif counter0 >= 2 * t + 1:
+            result['result'] = 2
+        elif counter0 >= t + 1:
+            result['result'] = 3
+        elif counter1 >= t + 1:
+            result['result'] = 4
+        else:
+            result['coin'] = random.choice([0, 1])  # 从 SGX 取得随机值
 
         # 序列化并发送结果
         response_bytes = pickle.dumps(result)
         conn.sendall(response_bytes)
-        print("已发送响应：", result)
+        print("[SGX] 已发送响应：", result)
 
     finally:
         conn.close()
@@ -51,7 +80,7 @@ def start_server():
 
     while True:
         client_conn, addr = server_socket.accept()
-        print(f"连接来自 {addr}")
+        print(f"[SGX] 连接来自 {addr}")
         # 使用 gevent 协程并发处理每个客户端连接
         gevent.spawn(handle_client, client_conn)
 

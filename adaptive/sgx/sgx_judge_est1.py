@@ -8,7 +8,7 @@ monkey.patch_all()
 import pickle
 
 HOST = '127.0.0.1'
-PORT = 65433
+PORT = 65431
 
 
 def handle_client(conn):
@@ -23,12 +23,12 @@ def handle_client(conn):
             data.extend(chunk)
 
         if not data:
-            print("未收到任何数据")
+            print("[SGX] 未收到任何数据")
             return
 
         # 反序列化对象
         obj = pickle.loads(data)
-        print("收到对象：", obj)
+        print("[SGX] 收到对象：", obj)
 
         # 模拟 SGX 处理逻辑
         N = obj.get("n", 0)
@@ -53,12 +53,7 @@ def handle_client(conn):
         # 序列化并发送结果
         response_bytes = pickle.dumps(result)
         conn.sendall(response_bytes)
-        print("已发送响应：", result)
-
-        # 序列化并发送结果
-        response_bytes = pickle.dumps(result)
-        conn.sendall(response_bytes)
-        print("已发送响应：", result)
+        print("[SGX] 已发送响应：", result)
 
     finally:
         conn.close()

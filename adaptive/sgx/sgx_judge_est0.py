@@ -1,17 +1,21 @@
+import base64
 import random
 
 from gevent import socket, monkey
 import gevent
+
+from cryptor import Cryptor
 
 monkey.patch_all()
 
 import pickle
 
 HOST = '127.0.0.1'
-PORT = 65433
+PORT = 65430
 
 
 def handle_client(conn):
+    cryptor = Cryptor()
     try:
         # 接收全部数据，直到连接关闭
         data = bytearray()
@@ -22,12 +26,12 @@ def handle_client(conn):
             data.extend(chunk)
 
         if not data:
-            print("未收到任何数据")
+            print("[SGX] 未收到任何数据")
             return
 
         # 反序列化对象
         obj = pickle.loads(data)
-        print("收到对象：", obj)
+        print("[SGX] 收到对象：", obj)
 
         # 模拟 SGX 处理逻辑
         voteObj1 = obj.get("voteObj1", dict())
@@ -35,8 +39,13 @@ def handle_client(conn):
         count_1 = 0
 
         for key in voteObj1:
-            print("voteObj1[key] ---->", voteObj1[key])
-            if voteObj1[key] == 0:
+            print("[SGX] voteObj1[key] ---->", voteObj1[key])
+            aes_key = cryptor.load_aes_key_from_file(
+                "/mnt/c/Users/yorky/Desktop/Project/Beat-LocalCoin-SGX/adaptive/sgx/aes.key"
+            )
+            vote = cryptor.decrypt_aes_b64(voteObj1[key], aes_key)
+            print("[SGX] vote ---->", vote)
+            if vote == 0:
                 count_0 += 1
             else:
                 count_1 += 1
@@ -51,7 +60,7 @@ def handle_client(conn):
         # 序列化并发送结果
         response_bytes = pickle.dumps(result)
         conn.sendall(response_bytes)
-        print("已发送响应：", result)
+        print("[SGX] 已发送响应：", result)
 
     finally:
         conn.close()

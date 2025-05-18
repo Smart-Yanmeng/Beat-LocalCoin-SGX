@@ -1,8 +1,12 @@
+import base64
+
 from gevent import monkey
+
+from adaptive.sgx.cryptor import Cryptor
 
 monkey.patch_all()
 
-from .broadcasts import initBeforeBinaryConsensus, local_binary_consensus, binary_consensus,fast_binary_consensus
+from .broadcasts import initBeforeBinaryConsensus, local_binary_consensus, binary_consensus, fast_binary_consensus
 from .utils import myRandom as random
 from gevent import Greenlet
 import gevent
@@ -37,11 +41,15 @@ def acs(pid, N, t, Q, broadcast, receive):
                 if len(receivedChannelsFlags) >= N - t:
                     locker2.put("Key")
                 if version == 1:
-                    # 提出提案并加密提案
-                    vote = "abc"
+                    # todo: 利用 SGX 的公钥加密提案
+                    cryptor = Cryptor()
+                    aes_key = cryptor.load_aes_key_from_file(
+                        "/mnt/c/Users/yorky/Desktop/Project/Beat-LocalCoin-SGX/adaptive/sgx/aes.key"
+                    )
+                    encrypted_vote = cryptor.encrypt_aes_b64("1", aes_key)
 
                     greenletPacker(Greenlet(local_binary_consensus, i, pid,
-                                            N, t, vote, decideChannel[i], make_bc(i),
+                                            N, t, encrypted_vote, decideChannel[i], make_bc(i),
                                             reliableBroadcastReceiveQueue[i].get),
                                    'acs.callbackFactory.binary_consensus', (pid, N, t, Q, broadcast, receive)).start()
                 # if version == 2:
@@ -50,10 +58,10 @@ def acs(pid, N, t, Q, broadcast, receive):
                 #                             reliableBroadcastReceiveQueue[i].get),
                 #                    'acs.callbackFactory.fast_binary_consensus',
                 #                    (pid, N, t, Q, broadcast, receive)).start()
-                if version == 2:
-                    greenletPacker(Greenlet(binary_consensus, i, pid,
-                                            N, t, vote, decideChannel[i], make_bc(i), reliableBroadcastReceiveQueue[i].get),
-                                   'acs.callbackFactory.binary_consensus', (pid, N, t, Q, broadcast, receive)).start()
+                # if version == 2:
+                #     greenletPacker(Greenlet(binary_consensus, i, pid,
+                #                             N, t, encrypted_vote, decideChannel[i], make_bc(i), reliableBroadcastReceiveQueue[i].get),
+                #                    'acs.callbackFactory.binary_consensus', (pid, N, t, Q, broadcast, receive)).start()
 
                 # elif version == 4:
                 #     greenletPacker(Greenlet(cobalt_binary_consensus, i, pid,
@@ -191,4 +199,3 @@ if __name__ == '__main__':
     Q = [1] * (2 * 1 + 1 + 1) + [0] * 1
     random.shuffle(Q)
     random_delay_acs(5, 1, Q)
-

@@ -1,9 +1,3 @@
-from Crypto import Random
-from Crypto.Cipher import AES
-from Crypto.Hash import SHA256
-from charm.toolbox.ecgroup import ECGroup, G
-from charm.toolbox.eccurve import prime256v1
-from base64 import decodestring
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
