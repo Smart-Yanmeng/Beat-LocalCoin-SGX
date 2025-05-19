@@ -470,7 +470,7 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
         #     "aesKey": aesKey,
         #     "selected_B": b''.join(selected_B)
         # }
-
+        #
         # encrypted_B = get_encrypted_B_from_SGX(obj=msgObj)
 
         ### todo: None-SGX
@@ -490,14 +490,14 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
         # print(includeTransactionChannel.get)
 
         commonSet, proposals = includeTransaction(pid, N, t, proposal, broadcast, includeTransactionChannel.get, send)
-        mylog("timestampIE (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
+        # mylog("timestampIE (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
         receivedProposals = True
         for i in range(N):
             probe(i)
         for i, c in enumerate(commonSet):  # stx is the same for every party
             if c:
                 one, two, three, four, five, six = deserializeEnc(proposals[i][:ENC_SERIALIZED_LENGTH])
-                print("----> ENC <----")
+                # print("----> ENC <----")
                 # print(one)
                 # print(two)
                 # print(three)
@@ -508,7 +508,7 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
                 share = encSKs[pid].decrypt_share(one, two, three, four, five, six)
                 broadcast(('O', i, share))
 
-        mylog("timestampIE2 (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
+        # mylog("timestampIE2 (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
         recoveredSyncedTxList = []
 
         def prepareTx(i):
@@ -533,7 +533,7 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
 
         gevent.joinall(thList)
 
-        mylog("timestampE (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
+        # mylog("timestampE (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
 
         for rtx in recoveredSyncedTxList:
             finishedTx.update(set(rtx))

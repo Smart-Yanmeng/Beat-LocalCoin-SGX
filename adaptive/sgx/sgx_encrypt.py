@@ -1,3 +1,5 @@
+import base64
+
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
@@ -75,8 +77,8 @@ def handle_client(conn):
         print("收到对象：", obj)
 
         # 模拟 SGX 处理逻辑
-        # aesKey = obj.get("aesKey", "")
-        selected_B = obj.get("selected_B", "")
+        aesKey = obj.get("aesKey", "")
+        selected_B = base64.b16encode(obj.get("selected_B", "")).decode("utf-8")
 
         public_key = load_public_key_from_pem("./pub.pem")
         encrypted_B = encrypt_with_rsa(public_key, selected_B)

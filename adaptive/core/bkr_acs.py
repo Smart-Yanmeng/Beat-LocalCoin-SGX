@@ -18,6 +18,11 @@ lockBA = Queue(1)
 defaultBA = []
 lockBA.put(1)
 
+cryptor = Cryptor()
+aes_key = cryptor.load_aes_key_from_file(
+    "/mnt/c/Users/yorky/Desktop/Project/Beat-LocalCoin-SGX/adaptive/sgx/aes.key"
+)
+
 
 def acs(pid, N, t, Q, broadcast, receive):
     version = 1
@@ -42,11 +47,8 @@ def acs(pid, N, t, Q, broadcast, receive):
                     locker2.put("Key")
                 if version == 1:
                     # todo: 利用 SGX 的公钥加密提案
-                    cryptor = Cryptor()
-                    aes_key = cryptor.load_aes_key_from_file(
-                        "/mnt/c/Users/yorky/Desktop/Project/Beat-LocalCoin-SGX/adaptive/sgx/aes.key"
-                    )
-                    encrypted_vote = cryptor.encrypt_aes_b64("1", aes_key)
+                    # encrypted_vote = cryptor.encrypt_aes_b64("1", aes_key)
+                    encrypted_vote = base64.b16encode(cryptor.encrypt_rsa((1).to_bytes(1, "big"))).decode("utf-8")
 
                     greenletPacker(Greenlet(local_binary_consensus, i, pid,
                                             N, t, encrypted_vote, decideChannel[i], make_bc(i),

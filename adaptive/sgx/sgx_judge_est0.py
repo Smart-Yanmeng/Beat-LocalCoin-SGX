@@ -13,9 +13,13 @@ import pickle
 HOST = '127.0.0.1'
 PORT = 65430
 
+cryptor = Cryptor()
+aes_key = cryptor.load_aes_key_from_file(
+    "/mnt/c/Users/yorky/Desktop/Project/Beat-LocalCoin-SGX/adaptive/sgx/aes.key"
+)
+
 
 def handle_client(conn):
-    cryptor = Cryptor()
     try:
         # 接收全部数据，直到连接关闭
         data = bytearray()
@@ -40,9 +44,6 @@ def handle_client(conn):
 
         for key in voteObj1:
             print("[SGX] voteObj1[key] ---->", voteObj1[key])
-            aes_key = cryptor.load_aes_key_from_file(
-                "/mnt/c/Users/yorky/Desktop/Project/Beat-LocalCoin-SGX/adaptive/sgx/aes.key"
-            )
             vote = cryptor.decrypt_aes_b64(voteObj1[key], aes_key)
             print("[SGX] vote ---->", vote)
             if vote == 0:

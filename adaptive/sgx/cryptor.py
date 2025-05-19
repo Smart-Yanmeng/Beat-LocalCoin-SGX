@@ -8,6 +8,10 @@ import base64
 
 
 class Cryptor:
+    def __init__(self):
+        self.public_key = self._load_public_key("/mnt/c/Users/yorky/Desktop/Project/Beat-LocalCoin-SGX/adaptive/sgx/pub.pem")
+        self.private_key = self._load_private_key("/mnt/c/Users/yorky/Desktop/Project/Beat-LocalCoin-SGX/adaptive/sgx/sec.pem")
+
     def _load_public_key(self, path: str):
         with open(path, "rb") as key_file:
             return serialization.load_pem_public_key(
@@ -28,11 +32,10 @@ class Cryptor:
             return base64.b64decode(f.read())
 
     # RSA加密
-    def encrypt_rsa(self, plaintext: bytes, key_path) -> bytes:
-        public_key = self._load_public_key(key_path)
-        if not public_key:
+    def encrypt_rsa(self, plaintext: bytes) -> bytes:
+        if not self.public_key:
             raise ValueError("Public key not loaded.")
-        return public_key.encrypt(
+        return self.public_key.encrypt(
             plaintext,
             rsa_padding.OAEP(
                 mgf=rsa_padding.MGF1(algorithm=hashes.SHA256()),
@@ -42,11 +45,10 @@ class Cryptor:
         )
 
     # RSA 解密
-    def decrypt_rsa(self, ciphertext: bytes, key_path) -> bytes:
-        private_key = self._load_private_key(key_path)
-        if not private_key:
+    def decrypt_rsa(self, ciphertext: bytes) -> bytes:
+        if not self.private_key:
             raise ValueError("Private key not loaded.")
-        return private_key.decrypt(
+        return self.private_key.decrypt(
             ciphertext,
             rsa_padding.OAEP(
                 mgf=rsa_padding.MGF1(algorithm=hashes.SHA256()),

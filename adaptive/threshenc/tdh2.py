@@ -151,7 +151,7 @@ class TDHPublicKey(object):
         # print(type(hashG(res)))
         # print(type(c))
         m = xor(hashG(res).decode("ISO-8859-1"), c)
-        print("---> m >>>>>>> COMBINED")
+        # print("---> m >>>>>>> COMBINED")
         return m
 
 
@@ -170,7 +170,7 @@ class TDHPrivateKey(TDHPublicKey):
         e_i = hash4(u_i, u1_i, h1_i)
         f_i = si + self.SK * e_i
         S = (u_i, e_i, f_i)
-        print("---> S >>>>>>> DECRYPTED")
+        # print("---> S >>>>>>> DECRYPTED")
         return S
 
 
