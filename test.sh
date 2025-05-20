@@ -7,5 +7,5 @@ export PYTHONPATH=~/Beat-LocalCoin/adaptive/commoncoin:~/Beat-LocalCoin/adaptive
 #python3 -m adaptive.commoncoin.prf_generate_keys 4 2 > thsig4_1.keys
 #python3 -m adaptive.ecdsa.generate_keys_ecdsa 4 > ecdsa.keys
 #python3 -m adaptive.threshenc.generate_keys 4 2 > thenc4_1.keys
-python3 -m adaptive.test.honest_party_test -k thsig4_1.keys -e ecdsa.keys -b 10 -n 4 -t 1 -c thenc4_1.keys
+python3 -m adaptive.test.honest_party_test -k thsig4_1.keys -e ecdsa.keys -b 100 -n 4 -t 1 -c thenc4_1.keys
 #python3 -m adaptive.test.honest_party_test_EC2 -k thsig4_1.keys -e ecdsa.keys -a 3 -b 10000 -n 4 -t 1 -c thenc4_1.keys -v 1

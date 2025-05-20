@@ -104,18 +104,22 @@ def acs(pid, N, t, Q, broadcast, receive):
         if not i in receivedChannelsFlags:
             # print "................sent?"
             receivedChannelsFlags.append(i)
+
+            ### todo: 用 SGX 的公钥加密提案
+            encrypted_vote = base64.b16encode(cryptor.encrypt_rsa((0).to_bytes(1, "big"))).decode("utf-8")
+
             if version == 1:
-                greenletPacker(Greenlet(local_binary_consensus, i, pid, N, t, 0,
+                greenletPacker(Greenlet(local_binary_consensus, i, pid, N, t, encrypted_vote,
                                         decideChannel[i], make_bc(i), reliableBroadcastReceiveQueue[i].get),
                                'acs.binary_consensus', (pid, N, t, Q, broadcast, receive)).start()
             # elif version == 2:
             #     greenletPacker(Greenlet(fast_binary_consensus, i, pid, N, t, 0,
             #                             decideChannel[i], make_bc(i), reliableBroadcastReceiveQueue[i].get),
             #                    'acs.fast_binary_consensus', (pid, N, t, Q, broadcast, receive)).start()
-            elif version == 2:
-                greenletPacker(Greenlet(binary_consensus, i, pid, N, t, 0,
-                                        decideChannel[i], make_bc(i), reliableBroadcastReceiveQueue[i].get),
-                               'acs.cobalt_binary_consensus', (pid, N, t, Q, broadcast, receive)).start()
+            # elif version == 2:
+            #     greenletPacker(Greenlet(binary_consensus, i, pid, N, t, 0,
+            #                             decideChannel[i], make_bc(i), reliableBroadcastReceiveQueue[i].get),
+            #                    'acs.cobalt_binary_consensus', (pid, N, t, Q, broadcast, receive)).start()
 
     def listenerFactory(i, channel):
         def _listener():

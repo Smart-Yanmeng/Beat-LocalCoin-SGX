@@ -77,7 +77,6 @@ def handle_client(conn):
         print("收到对象：", obj)
 
         # 模拟 SGX 处理逻辑
-        aesKey = obj.get("aesKey", "")
         selected_B = base64.b16encode(obj.get("selected_B", "")).decode("utf-8")
 
         public_key = load_public_key_from_pem("./pub.pem")

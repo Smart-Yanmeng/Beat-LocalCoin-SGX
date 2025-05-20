@@ -11,6 +11,8 @@ from .utils import mylog, MonitoredInt, callBackWrap, greenletFunction, \
 from collections import defaultdict
 import zfec
 import hashlib
+
+from ..sgx.cryptor import Cryptor
 from ..threshenc.tdh2 import encrypt, decrypt
 from .utils import serializeEnc, deserializeEnc, ENC_SERIALIZED_LENGTH
 import random
@@ -19,6 +21,37 @@ import gevent
 import time
 
 monkey.patch_all()
+
+
+def get_recovered_syncedTx_from_SGX(host='127.0.0.1', port=65437, obj=None):
+    """
+    使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器（不使用长度头）
+    """
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((host, port))
+
+    try:
+        # 1. 序列化对象
+        serialized_data = pickle.dumps(obj)
+
+        # 2. 发送数据
+        client_socket.sendall(serialized_data)
+        client_socket.shutdown(socket.SHUT_WR)  # 通知服务端数据已发完
+
+        # 3. 接收完整响应（直到服务端关闭连接）
+        response_data = bytearray()
+        while True:
+            chunk = client_socket.recv(4096)
+            if not chunk:
+                break
+            response_data.extend(chunk)
+
+        # 4. 反序列化响应对象
+        return pickle.loads(response_data)
+
+    finally:
+        client_socket.close()
+
 
 
 def get_encrypted_B_from_SGX(host='127.0.0.1', port=65436, obj=None):
@@ -273,12 +306,12 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
 
     greenletPacker(Greenlet(Listener), 'multiSigBr.Listener', (pid, N, t, msg, broadcast, receive, outputs)).start()
     buf = msg  # We already assumed the proposals are byte strings
-    # print("2--", pid, buf)
+    # print("buf ---> ", pid, buf)
 
     assert K <= 256  # TODO: Record this assumption!
     # pad m to a multiple of K bytes
     padlen = K - (len(buf) % K)
-    buf += padlen * chr(K - padlen).encode()
+    buf += padlen * chr(1).encode()
     step = len(buf) // K
 
     blocks = [buf[i * step: (i + 1) * step] for i in range(K)]
@@ -377,6 +410,8 @@ def includeTransaction(pid, N, t, setToInclude, broadcast, receive, send):
                    (pid, N, t, setToInclude, broadcast, receive)).start()
 
     commonSet = locker.get()
+
+    # print("TXSet ---> ", TXSet)
     return commonSet, TXSet
 
 
@@ -387,6 +422,9 @@ import time, sys
 lock = Queue()
 finishcount = 0
 lock.put(1)
+
+cryptor = Cryptor()
+aes_key = cryptor.load_aes_key_from_file("/mnt/c/Users/yorky/Desktop/Project/Beat-LocalCoin-SGX/adaptive/sgx/aes.key")
 
 
 @greenletFunction
@@ -459,70 +497,100 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
 
             continue
 
+        # 随机提案
         oldest_B = transactionCache[:B]
         selected_B = random.sample(oldest_B, int(min(B / N, len(oldest_B))))
-        aesKey = random._urandom(32)  #
+        # print("len(selected_B) ---> ", len(b''.join(selected_B)))
+        # print("selected_B ---> ", selected_B)
 
-        label = "1"
+        # aesKey = random._urandom(32)
+        # label = "1"
 
-        ### todo: SGX
-        # msgObj = {
-        #     "aesKey": aesKey,
-        #     "selected_B": b''.join(selected_B)
-        # }
-        #
-        # encrypted_B = get_encrypted_B_from_SGX(obj=msgObj)
+        # RSA 加密
+        # 使用 RSA 加密 AES 密钥，用 AES 密钥加密 selected_B
+        encrypted_B = cryptor.encrypt_aes(b''.join(selected_B), aes_key)
+        encryptedAESKey = cryptor.encrypt_rsa(aes_key)
+        proposal = encryptedAESKey + encrypted_B
 
-        ### todo: None-SGX
-        encrypted_B = encrypt(aesKey, b''.join(selected_B))
+        # 门限加密
+        # encrypted_B = encrypt(aesKey, b''.join(selected_B))
+        # encryptedAESKey = encPK.encrypt(aesKey, label)
+        # proposal = serializeEnc(encryptedAESKey).encode("ISO-8859-1") + encrypted_B
 
-        encryptedAESKey = encPK.encrypt(aesKey, label)
-        proposal = serializeEnc(encryptedAESKey).encode("ISO-8859-1") + encrypted_B
+        # print("aes_key ---> ", aes_key)
+        # print("encrypted_B ---> ", encrypted_B)
+        # print("encryptedAESKey ---> ", encryptedAESKey)
+        # print("proposal ---> ", proposal)
+        print("len(proposal) ---> ", len(proposal))
+        print("len(encrypted_B) ---> ", len(encrypted_B))
 
-        # print(proposal)
-
-        # print(len(proposal.decode("ISO-8859-1")))
-        mylog("timestampIB (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
+        # mylog("timestampIB (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
 
         tb1 = time.time()  # beginning of the protocol
 
-        print("\033[33m----------=- Transaction Queue -=----------\033[0m")
+        # print("\033[33m----------=- Transaction Queue -=----------\033[0m")
         # print(includeTransactionChannel.get)
 
         commonSet, proposals = includeTransaction(pid, N, t, proposal, broadcast, includeTransactionChannel.get, send)
+        # print("proposals ---> ", proposals)
         # mylog("timestampIE (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
         receivedProposals = True
-        for i in range(N):
-            probe(i)
-        for i, c in enumerate(commonSet):  # stx is the same for every party
-            if c:
-                one, two, three, four, five, six = deserializeEnc(proposals[i][:ENC_SERIALIZED_LENGTH])
-                # print("----> ENC <----")
-                # print(one)
-                # print(two)
-                # print(three)
-                # print(four)
-                # print(five)
-                # print(six)
-                # share = encSKs[pid].decrypt_share(deserializeEnc(proposals[i][:ENC_SERIALIZED_LENGTH]))
-                share = encSKs[pid].decrypt_share(one, two, three, four, five, six)
-                broadcast(('O', i, share))
+
+        ### todo: None-SGX
+        # for i in range(N):
+        #     probe(i)
+        # for i, c in enumerate(commonSet):  # stx is the same for every party
+        #     if c:
+        #         one, two, three, four, five, six = deserializeEnc(proposals[i][:ENC_SERIALIZED_LENGTH])
+        #         print("----> DEC <----")
+        #         # print(one)
+        #         # print(two)
+        #         # print(three)
+        #         # print(four)
+        #         # print(five)
+        #         # print(six)
+        #         # share = encSKs[pid].decrypt_share(deserializeEnc(proposals[i][:ENC_SERIALIZED_LENGTH]))
+        #         share = encSKs[pid].decrypt_share(one, two, three, four, five, six)
+        #         # print("share ---> ", share)
+        #         broadcast(('O', i, share))
 
         # mylog("timestampIE2 (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
         recoveredSyncedTxList = []
 
         def prepareTx(i):
-            rec = locks[i].get()
-            encodedTxSet = decrypt(rec.encode("ISO-8859-1"),
-                                   ((proposals[i].decode("ISO-8859-1"))[ENC_SERIALIZED_LENGTH:
-                                                                        len(proposals[i]
-                                                                            .decode("ISO-8859-1")) - 1])
-                                   .encode("ISO-8859-1"))
-            assert len(encodedTxSet) % TR_SIZE == 0
-            recoveredSyncedTx = [encodedTxSet[i:i + TR_SIZE] for i in range(0, len(encodedTxSet), TR_SIZE)]
+            ### todo: None-SGX 门限解密
+            # rec = locks[i].get()
+            # encodedTxSet = decrypt(rec.encode("ISO-8859-1"), ((proposals[i].decode("ISO-8859-1"))[ENC_SERIALIZED_LENGTH:len(proposals[i].decode("ISO-8859-1")) - 1]).encode("ISO-8859-1"))
+            # assert len(encodedTxSet) % TR_SIZE == 0
+            # recoveredSyncedTx = [encodedTxSet[i:i + TR_SIZE] for i in range(0, len(encodedTxSet), TR_SIZE)]
+            # print("len(recoveredSyncedTx) ---> ", len(recoveredSyncedTx))
+            # print("recoveredSyncedTx ---> ", recoveredSyncedTx)
+            # recoveredSyncedTxList.append(recoveredSyncedTx)
+
+            ### todo: SGX
+            txObj = {
+                "proposal": proposals[i]
+            }
+
+            recoveredSyncedTx = get_recovered_syncedTx_from_SGX(obj=txObj)
             recoveredSyncedTxList.append(recoveredSyncedTx)
 
-        tb3 = time.time()
+            ### todo: None-SGX RSA 解密
+            # aesKeyFromEncrypted = cryptor.decrypt_rsa(proposals[i][:256])
+            # encodedTxSet = cryptor.decrypt_aes(proposals[i][256:].rstrip(b'\x01'), aesKeyFromEncrypted)
+            #
+            # assert len(encodedTxSet) % TR_SIZE == 0
+            #
+            # recoveredSyncedTx = [encodedTxSet[i:i + TR_SIZE] for i in range(0, len(encodedTxSet), TR_SIZE)]
+            # recoveredSyncedTxList.append(recoveredSyncedTx)
+            #
+            # print("proposals[i] ---> ", i, proposals[i])
+            # print("aesKeyFromEncrypted ---> ", aesKeyFromEncrypted)
+            # print("proposals[i][256:] ---> ", proposals[i][256:])
+            # print("len(encodedTxSet) ---> ", len(encodedTxSet))
+            # print("encodedTxSet ---> ", encodedTxSet)
+            # print("len(encodedTxSet) ---> ", len(encodedTxSet))
+            # print("recoveredSyncedTx ---> ", recoveredSyncedTx)
 
         thList = []
         for i, c in enumerate(commonSet):  # stx is the same for every party
@@ -536,6 +604,7 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
         # mylog("timestampE (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
 
         for rtx in recoveredSyncedTxList:
+            # print("rtx ----> ", rtx)
             finishedTx.update(set(rtx))
 
         mylog("[%d] %d distinct tx synced and %d tx left in the pool." % (

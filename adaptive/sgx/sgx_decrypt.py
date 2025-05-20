@@ -1,18 +1,19 @@
-import random
+import pickle
+import gevent
 
 from gevent import socket, monkey
-import gevent
+from cryptor import Cryptor
 
 monkey.patch_all()
 
-import pickle
-
 HOST = '127.0.0.1'
-PORT = 65431
+PORT = 65437
+TR_SIZE = 250
+
+cryptor = Cryptor()
 
 
 def handle_client(conn):
-    result = 0
     try:
         # 接收全部数据，直到连接关闭
         data = bytearray()
@@ -23,37 +24,27 @@ def handle_client(conn):
             data.extend(chunk)
 
         if not data:
-            print("[SGX] 未收到任何数据")
+            print("[SGX Server] 未收到任何数据")
             return
 
         # 反序列化对象
         obj = pickle.loads(data)
-        print("[SGX] 收到对象：", obj)
+        print("[SGX Server] 收到对象：", obj)
 
         # 模拟 SGX 处理逻辑
-        N = obj.get("n", 0)
-        voteObj2 = obj.get("voteObj2", dict())
-        count_0 = 0
-        count_1 = 0
+        proposal = obj.get("proposal", "")
 
-        for key in voteObj2:
-            # print("voteObj2[key] ---->", voteObj2[key])
-            if voteObj2[key] == 0:
-                count_0 += 1
-            else:
-                count_1 += 1
+        aesKeyFromEncrypted = cryptor.decrypt_rsa(proposal[:256])
+        encodedTxSet = cryptor.decrypt_aes(proposal[256:].rstrip(b'\x01'), aesKeyFromEncrypted)
 
-        if count_0 > N / 2:
-            result = 0
-        elif count_1 > N / 2:
-            result = 1
-        else:
-            result = 2
+        assert len(encodedTxSet) % TR_SIZE == 0
+
+        recoveredSyncedTx = [encodedTxSet[i:i + TR_SIZE] for i in range(0, len(encodedTxSet), TR_SIZE)]
 
         # 序列化并发送结果
-        response_bytes = pickle.dumps(result)
+        response_bytes = pickle.dumps(recoveredSyncedTx)
         conn.sendall(response_bytes)
-        print("[SGX] 已发送响应：", result)
+        print("[SGX Server] 已发送响应：", recoveredSyncedTx)
 
     finally:
         conn.close()
