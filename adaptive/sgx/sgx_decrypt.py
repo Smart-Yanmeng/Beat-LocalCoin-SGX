@@ -7,7 +7,7 @@ from cryptor import Cryptor
 monkey.patch_all()
 
 HOST = '127.0.0.1'
-PORT = 65437
+PORT = 65436
 TR_SIZE = 250
 
 cryptor = Cryptor()

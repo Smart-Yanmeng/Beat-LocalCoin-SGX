@@ -4,26 +4,24 @@ import pickle
 from gevent import socket, monkey
 
 from gevent import Greenlet
-from gevent.queue import Queue, Empty
+from gevent.queue import Queue
 from .bkr_acs import acs
 from .utils import mylog, MonitoredInt, callBackWrap, greenletFunction, \
-    greenletPacker, getEncKeys, Transaction, getECDSAKeys, sha1hash, TR_SIZE
+    greenletPacker, getEncKeys, Transaction, getECDSAKeys, sha1hash
 from collections import defaultdict
 import zfec
 import hashlib
 
 from ..sgx.cryptor import Cryptor
-from ..threshenc.tdh2 import encrypt, decrypt
-from .utils import serializeEnc, deserializeEnc, ENC_SERIALIZED_LENGTH
+from .utils import deserializeEnc, ENC_SERIALIZED_LENGTH
 import random
 import itertools
 import gevent
-import time
 
 monkey.patch_all()
 
 
-def get_recovered_syncedTx_from_SGX(host='127.0.0.1', port=65437, obj=None):
+def get_recovered_syncedTx_from_SGX(host='127.0.0.1', port=65436, obj=None):
     """
     使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器（不使用长度头）
     """
