@@ -1,6 +1,6 @@
 from gevent import socket, monkey
 import gevent
-
+import time
 import pickle
 
 monkey.patch_all()
@@ -12,6 +12,8 @@ PORT = 66666
 def handle_client(conn):
     result = 0
     try:
+        start_time = time.time()
+
         # 接收全部数据，直到连接关闭
         data = bytearray()
         while True:
@@ -37,7 +39,9 @@ def handle_client(conn):
         # 序列化并发送结果
         response_bytes = pickle.dumps(obj)
         conn.sendall(response_bytes)
-        print("已发送响应：", result)
+
+        end_time = time.time()
+        print(f"已发送响应，总耗时: {end_time - start_time:.6f} 秒")
 
     finally:
         conn.close()
