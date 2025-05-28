@@ -6,7 +6,7 @@ from adaptive.sgx.cryptor import Cryptor
 
 monkey.patch_all()
 
-from .broadcasts import initBeforeBinaryConsensus, local_binary_consensus, binary_consensus, fast_binary_consensus
+from .broadcasts import initBeforeBinaryConsensus, local_binary_consensus
 from .utils import myRandom as random
 from gevent import Greenlet
 import gevent

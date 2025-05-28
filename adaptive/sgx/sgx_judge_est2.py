@@ -1,8 +1,10 @@
+import base64
 import random
-from collections import defaultdict
 
 from gevent import socket, monkey
 import gevent
+
+from cryptor import Cryptor
 
 monkey.patch_all()
 
@@ -10,6 +12,11 @@ import pickle
 
 HOST = '127.0.0.1'
 PORT = 65432
+
+cryptor = Cryptor()
+aes_key = cryptor.load_aes_key_from_file(
+    "/mnt/c/Users/yorky/Desktop/Project/Beat-LocalCoin-SGX/adaptive/sgx/aes.key"
+)
 
 
 def handle_client(conn):
@@ -44,11 +51,13 @@ def handle_client(conn):
         t = obj.get("t", 0)
 
         for key in voteObj3:
-            if voteObj3[key] == 0:
-                result['v'] = voteObj3[key]
+            vote = int.from_bytes(cryptor.decrypt_rsa(base64.b16decode(voteObj3[key])), byteorder="big")
+
+            if vote == 0:
+                result['v'] = vote
                 counter0 += 1
             else:
-                result['v'] = voteObj3[key]
+                result['v'] = vote
                 counter1 += 1
 
         if counter1 >= 2 * t + 1:

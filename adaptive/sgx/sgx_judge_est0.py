@@ -51,11 +51,14 @@ def handle_client(conn):
                 count_1 += 1
 
         if count_0 > count_1:
-            result = 0
+            est = 0
         elif count_0 < count_1:
-            result = 1
+            est = 1
         else:
-            result = random.choice([0, 1])
+            est = random.choice([0, 1])
+
+        # 得出 COIN 并加密继续下一次广播
+        result = base64.b16encode(cryptor.encrypt_rsa(est.to_bytes(1, "big"))).decode("utf8")
 
         # 序列化并发送结果
         response_bytes = pickle.dumps(result)
