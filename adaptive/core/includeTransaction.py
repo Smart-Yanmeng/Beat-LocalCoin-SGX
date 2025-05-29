@@ -21,7 +21,7 @@ import gevent
 monkey.patch_all()
 
 
-def get_recovered_syncedTx_from_SGX(host='127.0.0.1', port=65436, obj=None):
+def get_rbc_counter_from_SGX(host='127.0.0.1', port=65437, obj=None):
     """
     使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器（不使用长度头）
     """
@@ -50,6 +50,35 @@ def get_recovered_syncedTx_from_SGX(host='127.0.0.1', port=65436, obj=None):
     finally:
         client_socket.close()
 
+
+def get_recovered_syncedTx_from_SGX(host='127.0.0.1', port=65436, obj=None):
+    """
+    使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器（不使用长度头）
+    """
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((host, port))
+
+    try:
+        # 1. 序列化对象
+        serialized_data = pickle.dumps(obj)
+
+        # 2. 发送数据
+        client_socket.sendall(serialized_data)
+        client_socket.shutdown(socket.SHUT_WR)  # 通知服务端数据已发完
+
+        # 3. 接收完整响应（直到服务端关闭连接）
+        response_data = bytearray()
+        while True:
+            chunk = client_socket.recv(4096)
+            if not chunk:
+                break
+            response_data.extend(chunk)
+
+        # 4. 反序列化响应对象
+        return pickle.loads(response_data)
+
+    finally:
+        client_socket.close()
 
 
 def get_encrypted_B_from_SGX(host='127.0.0.1', port=65436, obj=None):
@@ -255,15 +284,22 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
                 else:
                     raise ECDSASignatureError()
             elif msgBundle[0] == 'r':
-
+                ### todo: SGX
                 readyCounter[msgBundle[1]][msgBundle[2]] += 1
-                tmp = readyCounter[msgBundle[1]][msgBundle[2]]
+                rbcObj = {
+                    "tmp": readyCounter[msgBundle[1]][msgBundle[2]],
+                    "t": t,
+                    "Threshold2": Threshold2
+                }
+                result = get_rbc_counter_from_SGX(obj=rbcObj)
 
-                if tmp >= t + 1 and not readySent[msgBundle[1]]:  # Aux message
+                if result == 1 or result == 2 and not readySent[msgBundle[1]]:  # Aux message
                     readySent[msgBundle[1]] = True
                     broadcast(('r', msgBundle[1], msgBundle[2]))
-                if tmp >= Threshold2 and not outputs[msgBundle[1]].full() and \
-                        not reconstDone[msgBundle[1]] and len(opinions[msgBundle[1]]) >= Threshold:
+                if (result == 2 and
+                        not outputs[msgBundle[1]].full() and
+                        not reconstDone[msgBundle[1]] and
+                        len(opinions[msgBundle[1]]) >= Threshold):
                     reconstDone[msgBundle[1]] = True
                     if msgBundle[1] in rootHashes:
                         if rootHashes[msgBundle[1]] != msgBundle[2]:
@@ -279,9 +315,6 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
                                                             list(opinions[msgBundle[1]].keys())[
                                                             :Threshold])  # We only take the first [Threshold] fragments
 
-                    '''rawbuf = b''.join(reconstruction)
-
-                    buf = rawbuf[:-rawbuf[-1]]'''
                     # print("3---", pid, buf)
                     m = b''.join(reconstruction)
                     padlen = K - m[-1]
@@ -301,6 +334,52 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
                     # time.sleep(60)
                     if outputs[msgBundle[1]].empty():
                         outputs[msgBundle[1]].put(buf)
+
+                ### todo: None SGX
+                # readyCounter[msgBundle[1]][msgBundle[2]] += 1
+                # tmp = readyCounter[msgBundle[1]][msgBundle[2]]
+                #
+                # if tmp >= t + 1 and not readySent[msgBundle[1]]:  # Aux message
+                #     readySent[msgBundle[1]] = True
+                #     broadcast(('r', msgBundle[1], msgBundle[2]))
+                # if (tmp >= Threshold2 and
+                #         not outputs[msgBundle[1]].full() and
+                #         not reconstDone[msgBundle[1]] and
+                #         len(opinions[msgBundle[1]]) >= Threshold):
+                #     reconstDone[msgBundle[1]] = True
+                #     if msgBundle[1] in rootHashes:
+                #         if rootHashes[msgBundle[1]] != msgBundle[2]:
+                #             print("Cheating caught, exiting")
+                #             sys.exit(0)
+                #     else:
+                #         rootHashes[msgBundle[1]] = msgBundle[2]
+                #     if list(opinions[msgBundle[1]].values())[0] == '':
+                #         reconstruction = ['']
+                #     else:
+                #         # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                #         reconstruction = zfecDecoder.decode(list(opinions[msgBundle[1]].values())[:Threshold],
+                #                                             list(opinions[msgBundle[1]].keys())[
+                #                                             :Threshold])  # We only take the first [Threshold] fragments
+                #
+                #     # print("3---", pid, buf)
+                #     m = b''.join(reconstruction)
+                #     padlen = K - m[-1]
+                #     m = m[:-padlen]
+                #     buf = m
+                #
+                #     assert K <= 256  # TODO: Record this assumption!
+                #     # pad m to a multiple of K bytes
+                #     padlen = K - (len(buf) % K)
+                #     buf += padlen * chr(K - padlen).encode()
+                #     step = len(buf) // K
+                #     blocks = [buf[i * step: (i + 1) * step] for i in range(K)]
+                #     encodedFragList = zfecEncoder.encode(blocks)
+                #     mt = merkleTree(encodedFragList)
+                #
+                #     assert rootHashes[msgBundle[1]] == mt[1]  # full binary tree
+                #     # time.sleep(60)
+                #     if outputs[msgBundle[1]].empty():
+                #         outputs[msgBundle[1]].put(buf)
 
     greenletPacker(Greenlet(Listener), 'multiSigBr.Listener', (pid, N, t, msg, broadcast, receive, outputs)).start()
     buf = msg  # We already assumed the proposals are byte strings

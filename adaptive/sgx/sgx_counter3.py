@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from gevent import socket, monkey
 import gevent
 
@@ -8,14 +6,11 @@ monkey.patch_all()
 import pickle
 
 HOST = '127.0.0.1'
-PORT = 65435
+PORT = 65437
 
 
 def default_zero():
     return 0
-
-
-readyCounter = [defaultdict(default_zero) for _ in range(4)]
 
 
 def handle_client(conn):
@@ -35,25 +30,22 @@ def handle_client(conn):
 
         # 反序列化对象
         obj = pickle.loads(data)
-        print("收到对象：", obj)
+        print("[SGX SERVER] 收到对象")
 
         # 模拟 SGX 处理逻辑
         t = obj.get("t", 0)
-        msgBundle = obj.get("msgBundle", [])
+        tmp = obj.get("tmp", 0)
         threshold2 = obj.get("Threshold2", 0)
-
-        readyCounter[msgBundle[1]][msgBundle[2]] += 1
-        tmp = readyCounter[msgBundle[1]][msgBundle[2]]
 
         if tmp >= t + 1:
             result = 1
-        if tmp >= threshold2:
+        elif tmp >= threshold2:
             result = 2
 
         # 序列化并发送结果
         response_bytes = pickle.dumps(result)
         conn.sendall(response_bytes)
-        print("已发送响应：", result)
+        print("[SGX SERVER] 已发送响应")
 
     finally:
         conn.close()
