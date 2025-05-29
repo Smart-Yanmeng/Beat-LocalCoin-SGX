@@ -555,7 +555,7 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
         # mylog("timestampIE2 (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
         recoveredSyncedTxList = []
 
-        def prepareTx(i):
+        def prepareTx(i, c):
             ### todo: None-SGX 门限解密
             # rec = locks[i].get()
             # encodedTxSet = decrypt(rec.encode("ISO-8859-1"), ((proposals[i].decode("ISO-8859-1"))[ENC_SERIALIZED_LENGTH:len(proposals[i].decode("ISO-8859-1")) - 1]).encode("ISO-8859-1"))
@@ -567,6 +567,7 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
 
             ### todo: SGX
             txObj = {
+                "vote": c,
                 "proposal": proposals[i]
             }
 
@@ -593,7 +594,7 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
         thList = []
         for i, c in enumerate(commonSet):  # stx is the same for every party
             if c:
-                s = Greenlet(prepareTx, i)
+                s = Greenlet(prepareTx, i, c)
                 thList.append(s)
                 s.start()
 

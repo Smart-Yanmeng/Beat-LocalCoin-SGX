@@ -413,51 +413,51 @@ def reliable_broadcast2(pid, N, t, broadcast, receive, output):
 # - If at least (t+1) of the honest parties input v, then v will be output by all honest parties
 # (Note: it requires up to 2*t honest parties to deliver their messages. At the highest tolerance setting, this means *all* the honest parties)
 # - If any honest party outputs a value, then it must have been input by some honest party. If only corrupted parties propose a value, it will never be output.
-def bv_broadcast(pid, N, t, broadcast, receive, output, release=lambda: None):
-    assert N > 3 * t
-
-    def input(my_v):
-        # my_v : input valuef
-
-        # My initial input value is v in (0,1)
-        # assert my_v in (0, 1)
-
-        # We'll output each of (0,1) at most once
-        out = (makeCallOnce(lambda: output(0)),
-               makeCallOnce(lambda: output(1)))
-
-        # We'll relay each of (0,1) at most once
-        received = defaultdict(set)
-
-        def _bc(v):
-            broadcast(v)
-
-        relay = (makeCallOnce(lambda: _bc(0)),
-                 makeCallOnce(lambda: _bc(1)))
-
-        # Start by relaying my value
-        relay[my_v]()
-        outputed = []
-        while True:
-            (sender, v) = receive()
-
-            assert v in (0, 1)
-            assert sender in range(N)
-            received[v].add(sender)
-            # Relay after reaching first threshold
-            if len(received[v]) >= t + 1:
-                relay[v]()
-
-            # Output after reaching second threshold
-            if len(received[v]) >= 2 * t + 1:
-                out[v]()
-                if not v in outputed:
-                    outputed.append(v)
-                if len(outputed) == 2:
-                    release()  # Release Channel
-                    return  # We don't have to wait more
-
-    return input
+# def bv_broadcast(pid, N, t, broadcast, receive, output, release=lambda: None):
+#     assert N > 3 * t
+#
+#     def input(my_v):
+#         # my_v : input valuef
+#
+#         # My initial input value is v in (0,1)
+#         # assert my_v in (0, 1)
+#
+#         # We'll output each of (0,1) at most once
+#         out = (makeCallOnce(lambda: output(0)),
+#                makeCallOnce(lambda: output(1)))
+#
+#         # We'll relay each of (0,1) at most once
+#         received = defaultdict(set)
+#
+#         def _bc(v):
+#             broadcast(v)
+#
+#         relay = (makeCallOnce(lambda: _bc(0)),
+#                  makeCallOnce(lambda: _bc(1)))
+#
+#         # Start by relaying my value
+#         relay[my_v]()
+#         outputed = []
+#         while True:
+#             (sender, v) = receive()
+#
+#             assert v in (0, 1)
+#             assert sender in range(N)
+#             received[v].add(sender)
+#             # Relay after reaching first threshold
+#             if len(received[v]) >= t + 1:
+#                 relay[v]()
+#
+#             # Output after reaching second threshold
+#             if len(received[v]) >= 2 * t + 1:
+#                 out[v]()
+#                 if not v in outputed:
+#                     outputed.append(v)
+#                 if len(outputed) == 2:
+#                     release()  # Release Channel
+#                     return  # We don't have to wait more
+#
+#     return input
 
 
 # def fast_bv_broadcast(round, pid, N, t, broadcast, receive, output, release=lambda: None):
@@ -642,18 +642,18 @@ def initBeforeBinaryConsensus():  # A dummy function now
 #         return vi
 
 
-def checkFinishedWithGlobalState(N):
-    '''
-    Check if binary consensus is finished
-    :param N: the number of parties
-    :return: True if not finished, False if finished
-    '''
-    if len(globalState.keys()) < N:
-        return True
-    for i in globalState:
-        if not globalState[i]:
-            return True
-    return False
+# def checkFinishedWithGlobalState(N):
+#     '''
+#     Check if binary consensus is finished
+#     :param N: the number of parties
+#     :return: True if not finished, False if finished
+#     '''
+#     if len(globalState.keys()) < N:
+#         return True
+#     for i in globalState:
+#         if not globalState[i]:
+#             return True
+#     return False
 
 
 cryptor = Cryptor()
@@ -895,20 +895,21 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
         countResultFromSGX = get_est3_from_sgx(obj=voteObj3)
         v = countResultFromSGX['v']
 
+        ### todo: None-SGX
         if countResultFromSGX['result'] == 1 and v != null:
-            globalState[pid] = "%d" % v
+            # globalState[pid] = "%d" % v
             decide.put(v)
             decided = True
-            decidedNum = v
-            if pid == 0:
-                print("[PID: %d] Decided on value: %d, round: %d" % (pid, v, round))
+            # decidedNum = v
+            # if pid == 0:
+            #     print("[PID: %d] Decided on value: %d, round: %d" % (pid, v, round))
         elif countResultFromSGX['result'] == 2 and v != null:
-            globalState[pid] = "%d" % v
+            # globalState[pid] = "%d" % v
             decide.put(v)
             decided = True
-            decidedNum = v
-            if pid == 0:
-                print("[PID: %d] Decided on value: %d, round: %d" % (pid, v, round))
+            # decidedNum = v
+            # if pid == 0:
+            #     print("[PID: %d] Decided on value: %d, round: %d" % (pid, v, round))
         elif countResultFromSGX['result'] == 3 and v != null:
             est = v
         elif countResultFromSGX['result'] == 4 and v != null:

@@ -4,7 +4,7 @@ import secrets
 import time
 
 HOST = '127.0.0.1'
-PORT = 66666
+PORT = 6666
 
 def main():
     # 要发送的随机字节长度（例如 1MB）

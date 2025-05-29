@@ -54,10 +54,10 @@ def handle_client(conn):
             vote = int.from_bytes(cryptor.decrypt_rsa(base64.b16decode(voteObj3[key])), byteorder="big")
 
             if vote == 0:
-                result['v'] = vote
+                result['v'] = voteObj3[key]
                 counter0 += 1
             else:
-                result['v'] = vote
+                result['v'] = voteObj3[key]
                 counter1 += 1
 
         if counter1 >= 2 * t + 1:
@@ -69,12 +69,13 @@ def handle_client(conn):
         elif counter1 >= t + 1:
             result['result'] = 4
         else:
-            result['coin'] = random.choice([0, 1])  # 从 SGX 取得随机值
+            est = random.choice([0, 1])
+            result['coin'] = base64.b16encode(cryptor.encrypt_rsa(est.to_bytes(1, "big"))).decode("utf-8")
 
         # 序列化并发送结果
         response_bytes = pickle.dumps(result)
         conn.sendall(response_bytes)
-        print("[SGX] 已发送响应：", result)
+        print("[SGX SERVER] 已发送响应")
 
     finally:
         conn.close()

@@ -35,7 +35,7 @@ def handle_client(conn):
 
         # 反序列化对象
         obj = pickle.loads(data)
-        print("收到对象：", obj)
+        print("[SGX SERVER] 收到对象")
 
         # 模拟 SGX 处理逻辑
         t = obj.get("t", 0)
@@ -55,7 +55,7 @@ def handle_client(conn):
         # 序列化并发送结果
         response_bytes = pickle.dumps(result)
         conn.sendall(response_bytes)
-        print("已发送响应：", result)
+        print("[SGX SERVER] 已发送响应")
 
     finally:
         conn.close()

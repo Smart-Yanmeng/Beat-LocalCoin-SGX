@@ -1,3 +1,4 @@
+import base64
 import pickle
 import gevent
 
@@ -29,22 +30,28 @@ def handle_client(conn):
 
         # 反序列化对象
         obj = pickle.loads(data)
-        print("[SGX Server] 收到对象：", obj)
+        print("[SGX Server] 收到对象")
 
         # 模拟 SGX 处理逻辑
+        encryptedVote = obj.get("vote", "")
         proposal = obj.get("proposal", "")
 
-        aesKeyFromEncrypted = cryptor.decrypt_rsa(proposal[:256])
-        encodedTxSet = cryptor.decrypt_aes(proposal[256:].rstrip(b'\x01'), aesKeyFromEncrypted)
+        voteFromEncrypted = int.from_bytes(cryptor.decrypt_rsa(base64.b16decode(encryptedVote)), byteorder='big')
+        if voteFromEncrypted != 1:
+            print("[SGX Server] 不接受此提案")
+            recoveredSyncedTx = []
+        else:
+            aesKeyFromEncrypted = cryptor.decrypt_rsa(proposal[:256])
+            encodedTxSet = cryptor.decrypt_aes(proposal[256:].rstrip(b'\x01'), aesKeyFromEncrypted)
 
-        assert len(encodedTxSet) % TR_SIZE == 0
+            assert len(encodedTxSet) % TR_SIZE == 0
 
-        recoveredSyncedTx = [encodedTxSet[i:i + TR_SIZE] for i in range(0, len(encodedTxSet), TR_SIZE)]
+            recoveredSyncedTx = [encodedTxSet[i:i + TR_SIZE] for i in range(0, len(encodedTxSet), TR_SIZE)]
 
         # 序列化并发送结果
         response_bytes = pickle.dumps(recoveredSyncedTx)
         conn.sendall(response_bytes)
-        print("[SGX Server] 已发送响应：", recoveredSyncedTx)
+        print("[SGX SERVER] 已发送响应")
 
     finally:
         conn.close()
