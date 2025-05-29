@@ -212,35 +212,6 @@ def dealer(players=10, k=5):
     return public_key, private_keys
 
 
-# def test():
-#     global PK, SKs
-#     PK, SKs = dealer(players=31, k=11)
-#
-#     m = SHA256.new('message').digest()
-#     L = SHA256.new('label').digest()
-#     C = PK.encrypt(m, L)
-#
-#     uu = C[2]
-#
-#     t1 = time.time()
-#     assert PK.verify_ciphertext(C)
-#
-#     shares = [sk.decrypt_share(C) for sk in SKs]
-#     for i, share in enumerate(shares):
-#         assert PK.verify_share(i, share, C)
-#
-#     SS = range(PK.l)
-#     for i in range(1):
-#         random.shuffle(SS)
-#         S = set(SS[:PK.k])
-#         m_ = PK.combine_shares(C, dict((s, shares[s]) for s in S))
-#         assert m_ == m
-#
-#     t2 = time.time()
-#     print("time: %f" % (t2 - t1))
-#     print("done.")
-
-
 BS = 16
 pad = lambda s: s + (BS - len(s) % BS) * chr(BS - len(s) % BS)
 unpad = lambda s: s[:-ord(s[len(s) - 1:])]
@@ -261,12 +232,3 @@ def decrypt(key, enc):
     iv = enc[:16]
     cipher = AES.new(key, AES.MODE_CBC, iv)
     return unpad(cipher.decrypt(enc[16:]))
-
-
-def main():
-    print("qwq")
-    # test()
-
-
-if __name__ == '__main__':
-    main()

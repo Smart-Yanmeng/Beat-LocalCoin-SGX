@@ -44,7 +44,7 @@ def handle_client(conn):
 
         # 反序列化对象
         obj = pickle.loads(data)
-        print("[SGX] 收到对象：", obj)
+        print("[SGX SERVER] 收到对象")
 
         # 模拟 SGX 处理逻辑
         voteObj3 = obj.get("voteObj3", dict())

@@ -1,7 +1,5 @@
 import base64
-
 from gevent import monkey
-
 from adaptive.sgx.cryptor import Cryptor
 
 monkey.patch_all()

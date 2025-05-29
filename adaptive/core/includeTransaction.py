@@ -598,8 +598,8 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
         # print("encrypted_B ---> ", encrypted_B)
         # print("encryptedAESKey ---> ", encryptedAESKey)
         # print("proposal ---> ", proposal)
-        print("len(proposal) ---> ", len(proposal))
-        print("len(encrypted_B) ---> ", len(encrypted_B))
+        # print("len(proposal) ---> ", len(proposal))
+        # print("len(encrypted_B) ---> ", len(encrypted_B))
 
         # mylog("timestampIB (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
 

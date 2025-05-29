@@ -41,7 +41,7 @@ def handle_client(conn):
         count_1 = 0
 
         for key in voteObj1:
-            print("[SGX Server] voteObj1[key] ---->", voteObj1[key])
+            # print("[SGX Server] voteObj1[key] ---->", voteObj1[key])
             # vote = cryptor.decrypt_aes_b64(voteObj1[key], aes_key)
             vote = int.from_bytes(cryptor.decrypt_rsa(base64.b16decode(voteObj1[key])), byteorder='big')
             print("[SGX Server] vote ---->", vote)

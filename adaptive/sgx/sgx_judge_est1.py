@@ -63,7 +63,7 @@ def handle_client(conn):
         # 序列化并发送结果
         response_bytes = pickle.dumps(result)
         conn.sendall(response_bytes)
-        print("[SGX] 已发送响应：", result)
+        print("[SGX SERVER] 已发送响应")
 
     finally:
         conn.close()
