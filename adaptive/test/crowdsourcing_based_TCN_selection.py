@@ -30,10 +30,10 @@ def start_crowdsourcing(n: int, task_id: str) -> List[Candidate]:
         candidate = Candidate(
             id=f"node_{i}",
             sgx_ver=random.choice(["v1", "v2", "v3"]),
-            cpu=random.uniform(2, 8),  # GHz
+            cpu=random.uniform(2, 5),  # GHz
             ram=random.uniform(4, 32),  # GB
-            bw=random.uniform(50, 1000),  # Mbps
-            lat=random.uniform(5, 100)  # ms
+            bw=random.uniform(1, 50),  # Mbps
+            lat=random.uniform(5, 50)  # ms
         )
         candidates.append(candidate)
     return evaluate_candidates(candidates, n)
