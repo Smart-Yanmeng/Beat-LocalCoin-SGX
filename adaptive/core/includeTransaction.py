@@ -21,7 +21,7 @@ import gevent
 monkey.patch_all()
 
 
-def get_rbc_counter_from_SGX(host='127.0.0.1', port=65437, obj=None):
+def get_rbc_counter_from_SGX(host='127.0.0.1', port=65437, obj=None) -> bytes:
     """
     使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器（不使用长度头）
     """
@@ -293,10 +293,10 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
                 }
                 result = get_rbc_counter_from_SGX(obj=rbcObj)
 
-                if result == 1 or result == 2 and not readySent[msgBundle[1]]:  # Aux message
+                if result == 1 and not readySent[msgBundle[1]]:  # Aux message
                     readySent[msgBundle[1]] = True
                     broadcast(('r', msgBundle[1], msgBundle[2]))
-                if (result == 2 and
+                if (result == 1 or result == 2 and
                         not outputs[msgBundle[1]].full() and
                         not reconstDone[msgBundle[1]] and
                         len(opinions[msgBundle[1]]) >= Threshold):
