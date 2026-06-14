@@ -1,4 +1,4 @@
-from .ecdsa_ssl import *
+from .ecdsa_pure import KEY
 import argparse
 import pickle as cPickle
 

@@ -26,18 +26,8 @@ git clone https://github.com/Smart-Yanmeng/Beat-LocalCoin-SGX.git
 ```bash
 cd Beat-LocalCoin-SGX
 ```
-#### Run SGX server (Make sure ports 65430-65436 are not occupied)
-```bash
-cd adaptive/sgx/
-python sgx_counter0.py
-python sgx_counter1.py
-python sgx_counter2.py
-python sgx_judge_est0.py
-python sgx_judge_est1.py
-python sgx_judge_est2.py
-python sgx_decrypt.py
-```
 #### Standalone
+SGX servers will start automatically with the test.
 ```bash
 python3 -m adaptive.test.honest_party_test -k thsig4_1.keys -e ecdsa.keys -b 100 -n 4 -t 1 -c thenc4_1.keys
 ```

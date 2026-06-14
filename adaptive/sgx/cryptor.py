@@ -9,8 +9,9 @@ import base64
 
 class Cryptor:
     def __init__(self):
-        self.public_key = self._load_public_key("/mnt/c/Users/yorky/Desktop/Project/Beat-LocalCoin-SGX/adaptive/sgx/pub.pem")
-        self.private_key = self._load_private_key("/mnt/c/Users/yorky/Desktop/Project/Beat-LocalCoin-SGX/adaptive/sgx/sec.pem")
+        _sgx_dir = os.path.dirname(os.path.abspath(__file__))
+        self.public_key = self._load_public_key(os.path.join(_sgx_dir, "pub.pem"))
+        self.private_key = self._load_private_key(os.path.join(_sgx_dir, "sec.pem"))
 
     def _load_public_key(self, path: str):
         with open(path, "rb") as key_file:

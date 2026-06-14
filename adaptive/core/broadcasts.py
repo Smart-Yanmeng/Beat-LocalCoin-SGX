@@ -1,11 +1,13 @@
 # coding=utf-8
-from gevent import Greenlet, socket, monkey
+from gevent import Greenlet, monkey
 from gevent.queue import Queue
 from collections import defaultdict
 from .utils import greenletPacker, getKeys
 from ..commoncoin.thresprf_gipc import serialize, serialize1, deserialize, combine_and_verify
 import time
-import pickle
+import base64
+import random
+import os
 
 from ..sgx.cryptor import Cryptor
 
@@ -15,207 +17,15 @@ from .utils import makeCallOnce, \
 
 monkey.patch_all()
 
+_SGX_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_SGX_DATA_DIR = os.path.join(_SGX_BASE_DIR, 'sgx')
 
-def get_est1_from_sgx(host='127.0.0.1', port=65430, obj=None):
-    """
-    使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器
-    """
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
+_sgx_cryptor = Cryptor()
+_sgx_aes_key = _sgx_cryptor.load_aes_key_from_file(
+    os.path.join(_SGX_DATA_DIR, "aes.key")
+)
 
-    try:
-        # 1. 序列化对象
-        serialized_data = pickle.dumps(obj)
-
-        # 2. 发送数据
-        client_socket.sendall(serialized_data)
-        client_socket.shutdown(socket.SHUT_WR)  # 通知服务端数据已发完
-
-        # 3. 接收完整响应（直到服务端关闭连接）
-        response_data = bytearray()
-        while True:
-            chunk = client_socket.recv(4096)
-            if not chunk:
-                break
-            response_data.extend(chunk)
-
-        # 4. 反序列化响应对象
-        return pickle.loads(response_data)
-
-    finally:
-        client_socket.close()
-
-
-def get_est2_from_sgx(host='127.0.0.1', port=65431, obj=None):
-    """
-    使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器
-    """
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
-
-    try:
-        # 1. 序列化对象
-        serialized_data = pickle.dumps(obj)
-
-        # 2. 发送数据
-        client_socket.sendall(serialized_data)
-        client_socket.shutdown(socket.SHUT_WR)  # 通知服务端数据已发完
-
-        # 3. 接收完整响应（直到服务端关闭连接）
-        response_data = bytearray()
-        while True:
-            chunk = client_socket.recv(4096)
-            if not chunk:
-                break
-            response_data.extend(chunk)
-
-        # 4. 反序列化响应对象
-        return pickle.loads(response_data)
-
-    finally:
-        client_socket.close()
-
-
-def get_est3_from_sgx(host='127.0.0.1', port=65432, obj=None):
-    """
-    使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器
-    """
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
-
-    try:
-        # 1. 序列化对象
-        serialized_data = pickle.dumps(obj)
-
-        # 2. 发送数据
-        client_socket.sendall(serialized_data)
-        client_socket.shutdown(socket.SHUT_WR)  # 通知服务端数据已发完
-
-        # 3. 接收完整响应（直到服务端关闭连接）
-        response_data = bytearray()
-        while True:
-            chunk = client_socket.recv(4096)
-            if not chunk:
-                break
-            response_data.extend(chunk)
-
-        # 4. 反序列化响应对象
-        return pickle.loads(response_data)
-
-    finally:
-        client_socket.close()
-
-
-def get_counter_result_from_sgx_broadcast(host='127.0.0.1', port=65433, obj=None):
-    """
-    使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器
-    """
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
-
-    try:
-        # 1. 序列化对象
-        serialized_data = pickle.dumps(obj)
-
-        # 2. 发送数据
-        client_socket.sendall(serialized_data)
-        client_socket.shutdown(socket.SHUT_WR)  # 通知服务端数据已发完
-
-        # 3. 接收完整响应（直到服务端关闭连接）
-        response_data = bytearray()
-        while True:
-            chunk = client_socket.recv(4096)
-            if not chunk:
-                break
-            response_data.extend(chunk)
-
-        # 4. 反序列化响应对象
-        return pickle.loads(response_data)
-
-    finally:
-        client_socket.close()
-
-
-def get_counter_result_from_sgx_broadcast1(host='127.0.0.1', port=65434, obj=None):
-    """
-    使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器（不使用长度头）
-    """
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
-
-    try:
-        # 1. 序列化对象
-        serialized_data = pickle.dumps(obj)
-
-        # 2. 发送数据
-        client_socket.sendall(serialized_data)
-        client_socket.shutdown(socket.SHUT_WR)  # 通知服务端数据已发完
-
-        # 3. 接收完整响应（直到服务端关闭连接）
-        response_data = bytearray()
-        while True:
-            chunk = client_socket.recv(4096)
-            if not chunk:
-                break
-            response_data.extend(chunk)
-
-        # 4. 反序列化响应对象
-        return pickle.loads(response_data)
-
-    finally:
-        client_socket.close()
-
-
-def get_counter_result_from_sgx_broadcast2(host='127.0.0.1', port=65435, obj=None):
-    """
-    使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器（不使用长度头）
-    """
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
-
-    try:
-        # 1. 序列化对象
-        serialized_data = pickle.dumps(obj)
-
-        # 2. 发送数据
-        client_socket.sendall(serialized_data)
-        client_socket.shutdown(socket.SHUT_WR)  # 通知服务端数据已发完
-
-        # 3. 接收完整响应（直到服务端关闭连接）
-        response_data = bytearray()
-        while True:
-            chunk = client_socket.recv(4096)
-            if not chunk:
-                break
-            response_data.extend(chunk)
-
-        # 4. 反序列化响应对象
-        return pickle.loads(response_data)
-
-    finally:
-        client_socket.close()
-
-
-def get_coin_from_sgx():
-    SGX_HOST = 'localhost'
-    SGX_PORT = 65432
-
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as so:
-        get_coin_timer_start = time.time()
-        so.connect((SGX_HOST, SGX_PORT))
-        so.sendall(b"1")  # 发送任意数据触发服务器响应
-
-        # 接收 1 字节（0 或 1）
-        data = so.recv(1)
-
-        coin = int.from_bytes(data, byteorder='little')  # 字节转整数
-
-        get_coin_timer_end = time.time()
-
-        print(
-            f"[ SGX SERVER ] SGX 决定硬币为 -> {coin}, 执行时间: {get_coin_timer_end - get_coin_timer_start:.4f} 秒")  # 输出 0 或 1
-
-        return coin
+_sgx_broadcast_counter = defaultdict(lambda: defaultdict(lambda: 0))
 
 
 def default_zero():
@@ -249,14 +59,13 @@ def reliable_broadcast(pid, N, t, broadcast, receive, output):
                     broadcast(('r', msgBundle[1], msgBundle[3]))
 
             elif msgBundle[0] == 'r':  # ready phase
-                ### todo: SGX
-                msgObj = {
-                    "t": t,
-                    "msgBundle": msgBundle,
-                    "Threshold2": Threshold2
-                }
-
-                sgx_result = get_counter_result_from_sgx_broadcast(obj=msgObj)
+                _sgx_broadcast_counter[msgBundle[1]][msgBundle[2]] += 1
+                tmp = _sgx_broadcast_counter[msgBundle[1]][msgBundle[2]]
+                sgx_result = 0
+                if tmp >= t + 1:
+                    sgx_result = 1
+                if tmp >= Threshold2:
+                    sgx_result = 2
 
                 if sgx_result == 1 and not readySent[msgBundle[1]]:
                     readySent[msgBundle[1]] = True
@@ -266,20 +75,6 @@ def reliable_broadcast(pid, N, t, broadcast, receive, output):
                     if len(result) == N:
                         output(result)
                         break
-
-                ### todo: None-SGX
-                # readyCounter[msgBundle[1]][msgBundle[2]] += 1
-                # tmp = readyCounter[msgBundle[1]][msgBundle[2]]
-                #
-                # if tmp >= t + 1 and not readySent[msgBundle[1]]:
-                #     readySent[msgBundle[1]] = True
-                #     broadcast(('r', msgBundle[1], msgBundle[2]))
-                #
-                # if tmp >= Threshold2:
-                #     result[msgBundle[1]] = msgBundle[2]
-                #     if len(result) == N:
-                #         output(result)
-                #         break
 
     return Listener
 
@@ -311,14 +106,13 @@ def reliable_broadcast1(pid, N, t, broadcast, receive, output):
                     broadcast(('r', msgBundle[1], msgBundle[3]))
 
             elif msgBundle[0] == 'r':  # ready phase
-                ### todo: SGX
-                msgObj = {
-                    "t": t,
-                    "msgBundle": msgBundle,
-                    "Threshold2": Threshold2
-                }
-
-                sgx_result = get_counter_result_from_sgx_broadcast1(obj=msgObj)
+                _sgx_broadcast_counter[msgBundle[1]][msgBundle[2]] += 1
+                tmp = _sgx_broadcast_counter[msgBundle[1]][msgBundle[2]]
+                sgx_result = 0
+                if tmp >= t + 1:
+                    sgx_result = 1
+                if tmp >= Threshold2:
+                    sgx_result = 2
 
                 if sgx_result == 1 and not readySent[msgBundle[1]]:
                     readySent[msgBundle[1]] = True
@@ -328,20 +122,6 @@ def reliable_broadcast1(pid, N, t, broadcast, receive, output):
                     if len(result) == N:
                         output(result)
                         break
-
-                ### todo: None-SGX
-                # readyCounter[msgBundle[1]][msgBundle[2]] += 1
-                # tmp = readyCounter[msgBundle[1]][msgBundle[2]]
-                #
-                # if tmp >= t + 1 and not readySent[msgBundle[1]]:
-                #     readySent[msgBundle[1]] = True
-                #     broadcast(('r', msgBundle[1], msgBundle[2]))
-                #
-                # if tmp >= Threshold2:
-                #     result[msgBundle[1]] = msgBundle[2]
-                #     if len(result) == N:
-                #         output(result)
-                #         break
 
     return Listener
 
@@ -373,14 +153,13 @@ def reliable_broadcast2(pid, N, t, broadcast, receive, output):
                     broadcast(('r', msgBundle[1], msgBundle[3]))
 
             elif msgBundle[0] == 'r':  # ready phase
-                ### todo: SGX
-                msgObj = {
-                    "t": t,
-                    "msgBundle": msgBundle,
-                    "Threshold2": Threshold2
-                }
-
-                sgx_result = get_counter_result_from_sgx_broadcast2(obj=msgObj)
+                _sgx_broadcast_counter[msgBundle[1]][msgBundle[2]] += 1
+                tmp = _sgx_broadcast_counter[msgBundle[1]][msgBundle[2]]
+                sgx_result = 0
+                if tmp >= t + 1:
+                    sgx_result = 1
+                if tmp >= Threshold2:
+                    sgx_result = 2
 
                 if sgx_result == 1 and not readySent[msgBundle[1]]:
                     readySent[msgBundle[1]] = True
@@ -390,20 +169,6 @@ def reliable_broadcast2(pid, N, t, broadcast, receive, output):
                     if len(result) == N:
                         output(result)
                         break
-
-                ### todo: None-SGX
-                # readyCounter[msgBundle[1]][msgBundle[2]] += 1
-                # tmp = readyCounter[msgBundle[1]][msgBundle[2]]
-                #
-                # if tmp >= t + 1 and not readySent[msgBundle[1]]:
-                #     readySent[msgBundle[1]] = True
-                #     broadcast(('r', msgBundle[1], msgBundle[2]))
-                #
-                # if tmp >= Threshold2:
-                #     result[msgBundle[1]] = msgBundle[2]
-                #     if len(result) == N:
-                #         output(result)
-                #         break
 
     return Listener
 
@@ -656,12 +421,6 @@ def initBeforeBinaryConsensus():  # A dummy function now
 #     return False
 
 
-cryptor = Cryptor()
-aes_key = cryptor.load_aes_key_from_file(
-    "/mnt/c/Users/yorky/Desktop/Project/Beat-LocalCoin-SGX/adaptive/sgx/aes.key"
-)
-
-
 def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
     """
     :param instance:
@@ -734,14 +493,6 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
 
         bvOutputHolder = Queue(1)
 
-        ### todo: SGX
-        # coin_greenlet = gevent.spawn(get_coin_from_sgx)
-        # s = coin_greenlet.get()
-
-        # todo: None-SGX
-        # s = random.choice([0, 1])
-        # print(f'[SGX] JUDGE COIN -> {s}')
-
         if decided:
             break
 
@@ -760,35 +511,22 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
 
         br1.start()
         w = bvOutputHolder.get()
-        print(type(w))
 
-        ### todo: None-SGX
-        # count_0 = 0
-        # count_1 = 0
-        # for key in w:
-        #     # 强行决定并解密 VOTE
-        #     # vote = cryptor.decrypt_aes_b64(w[key], aes_key)
-        #     vote = int.from_bytes(cryptor.decrypt_rsa(base64.b16decode(w[key])), byteorder='big')
-        #     # print("w[key] ----> ", vote)
-        #     if vote == 0:
-        #         count_0 += 1
-        #     else:
-        #         count_1 += 1
-        #
-        # if count_0 > count_1:
-        #     est1 = 0
-        # elif count_1 > count_0:
-        #     est1 = 1
-        # else:
-        #     est1 = random.choice([0, 1])
-        # print("1--------------This is the est1--------", pid, est1)
+        count_0 = 0
+        count_1 = 0
+        for key in w:
+            vote = int.from_bytes(_sgx_cryptor.decrypt_rsa(base64.b16decode(w[key])), byteorder='big')
+            if vote == 0:
+                count_0 += 1
+            else:
+                count_1 += 1
 
-        ### todo: SGX
-        voteObj1 = {
-            'voteObj1': w
-        }
-
-        est1 = get_est1_from_sgx(obj=voteObj1)
+        if count_0 > count_1:
+            est1 = 0
+        elif count_0 < count_1:
+            est1 = 1
+        else:
+            est1 = random.choice([0, 1])
 
         ##########################################
         #################Step 2###################
@@ -807,32 +545,20 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
         br2.start()
         w2 = bvOutputHolder2.get()
 
-        ### todo: None-SGX
-        # print("2----------------This the w2-------", pid, w2)
-        # count_0_2 = 0
-        # count_1_2 = 0
-        # for key in w2:
-        #     if w2[key] == 0:
-        #         count_0_2 += 1
-        #     else:
-        #         count_1_2 += 1
-        #
-        # if count_0_2 > N / 2:
-        #     est2 = 0
-        # elif count_1_2 > N / 2:
-        #     est2 = 1
-        # else:
-        #     est2 = null
-        #
-        # print("3------------This is the est2--------", pid, est2)
+        count_0_2 = 0
+        count_1_2 = 0
+        for key in w2:
+            if w2[key] == 0:
+                count_0_2 += 1
+            else:
+                count_1_2 += 1
 
-        ### todo: SGX
-        voteObj2 = {
-            'n': N,
-            'voteObj2': w2
-        }
-
-        est2 = get_est2_from_sgx(obj=voteObj2)
+        if count_0_2 > N / 2:
+            est2 = 0
+        elif count_1_2 > N / 2:
+            est2 = 1
+        else:
+            est2 = null
 
         ##########################################
         #################Step 3###################
@@ -852,50 +578,30 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
         br3.start()
         w3 = bvOutputHolder3.get()
 
-        ### todo: None-SGX
-        # count_0_3 = 0
-        # count_1_3 = 0
-        # for key in w3:
-        #     if w3[key] == 0:
-        #         v = w3[key]
-        #         count_0_3 += 1
-        #     else:
-        #         v = w3[key]
-        #         count_1_3 += 1
-        #
-        # if count_1_3 >= 2 * t + 1 and v != null:
-        #     globalState[pid] = "%d" % v
-        #     decide.put(v)
-        #     decided = True
-        #     decidedNum = v
-        #     if pid == 0:
-        #         print("[PID: %d] Decided on value: %d, round: %d" % (pid, v, round))
-        # elif count_0_3 >= 2 * t + 1 and v != null:
-        #     globalState[pid] = "%d" % v
-        #     decide.put(v)
-        #     decided = True
-        #     decidedNum = v
-        #     if pid == 0:
-        #         print("[PID: %d] Decided on value: %d, round: %d" % (pid, v, round))
-        # elif count_0_3 >= t + 1 and v != null:
-        #     est = v
-        # elif count_1_3 >= t + 1 and v != null:
-        #     est = v
-        # else:
-        #     # gevent.sleep(1)
-        #     est = random.choice([0, 1])
-        #     # est = coin_greenlet.get()  # 从 SGX 取得随机值
+        count_0_3 = 0
+        count_1_3 = 0
+        v = None
+        for key in w3:
+            if w3[key] == 0:
+                v = w3[key]
+                count_0_3 += 1
+            else:
+                v = w3[key]
+                count_1_3 += 1
 
-        ### todo: SGX
-        voteObj3 = {
-            'voteObj3': w3,
-            't': t
-        }
+        countResultFromSGX = {"v": v, "result": 0, "coin": 0}
+        if count_1_3 >= 2 * t + 1 and v != null:
+            countResultFromSGX['result'] = 1
+        elif count_0_3 >= 2 * t + 1 and v != null:
+            countResultFromSGX['result'] = 2
+        elif count_0_3 >= t + 1 and v != null:
+            countResultFromSGX['result'] = 3
+        elif count_1_3 >= t + 1 and v != null:
+            countResultFromSGX['result'] = 4
+        else:
+            est = random.choice([0, 1])
+            countResultFromSGX['coin'] = base64.b16encode(_sgx_cryptor.encrypt_rsa(est.to_bytes(1, "big"))).decode("utf-8")
 
-        countResultFromSGX = get_est3_from_sgx(obj=voteObj3)
-        v = countResultFromSGX['v']
-
-        ### todo: None-SGX
         if countResultFromSGX['result'] == 1 and v != null:
             # globalState[pid] = "%d" % v
             decide.put(v)

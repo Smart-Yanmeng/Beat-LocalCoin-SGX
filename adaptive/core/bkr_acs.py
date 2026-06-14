@@ -1,4 +1,5 @@
 import base64
+import os
 from gevent import monkey
 from adaptive.sgx.cryptor import Cryptor
 
@@ -16,9 +17,12 @@ lockBA = Queue(1)
 defaultBA = []
 lockBA.put(1)
 
+_SGX_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_SGX_DATA_DIR = os.path.join(_SGX_BASE_DIR, 'sgx')
+
 cryptor = Cryptor()
 aes_key = cryptor.load_aes_key_from_file(
-    "/mnt/c/Users/yorky/Desktop/Project/Beat-LocalCoin-SGX/adaptive/sgx/aes.key"
+    os.path.join(_SGX_DATA_DIR, "aes.key")
 )
 
 

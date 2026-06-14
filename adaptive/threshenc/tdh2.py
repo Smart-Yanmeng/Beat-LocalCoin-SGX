@@ -1,7 +1,7 @@
 from charm.core.engine.protocol import *
 from charm.toolbox.ecgroup import ECGroup, ZR, G
 from charm.toolbox.eccurve import prime256v1
-from base64 import encodestring, decodestring
+from base64 import encodebytes as encodestring, decodebytes as decodestring
 import random
 from Crypto.Hash import SHA256
 import time

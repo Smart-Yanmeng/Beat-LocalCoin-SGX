@@ -19,9 +19,9 @@ from ..core.utils import ACSException, checkExceptionPerGreenlet, encodeTransact
 from gevent.server import StreamServer
 import time
 
-import socks
 import struct
 import math
+import socket
 
 from subprocess import check_output
 from os.path import expanduser
@@ -63,16 +63,17 @@ def listen_to_channel(port):
 def connect_to_channel(hostname, port, party):
     mylog('Trying to connect to %s for party %d' % (repr((hostname, port)), party), verboseLevel=-1)
     retry = True
-    s = socks.socksocket()
+    s = None
     while retry:
         try:
-            s = socks.socksocket()
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect((hostname, port))
             retry = False
-        except Exception as e:  # socks.SOCKS5Error:
+        except Exception as e:
             retry = True
             gevent.sleep(1)
-            s.close()
+            if s:
+                s.close()
             mylog('retrying (%s, %d) caused by %s...' % (hostname, port, str(e)), verboseLevel=-1)
     q = Queue()
 
@@ -205,7 +206,7 @@ def client_test_freenet(N, t, version, options):
     # query amazon meta-data
     # localIP = check_output(['curl', 'http://169.254.169.254/latest/meta-data/public-ipv4'])
 
-    myID = 0
+    myID = options.myid
     N = len(IP_LIST)
     # print("localIP %s, myID %s, N %s"%(localIP, myID, N))
     initiateRND(options.tx)
@@ -379,6 +380,8 @@ if __name__ == '__main__':
                       help="Number of transactions proposed by each party", metavar="TX", type="int", default=-1)
     parser.add_option("-v", "--version", dest="v",
                       help="Binary Consensus Version", metavar="V", type="int")
+    parser.add_option("--my-id", dest="myid",
+                      help="My party ID", metavar="ID", type="int", default=0)
     (options, args) = parser.parse_args()
     prepareIPList(open(expanduser(options.hosts), 'r').read())
     if (options.ecdsa and options.threshold_keys and options.threshold_encs and options.n and options.t and options.v):

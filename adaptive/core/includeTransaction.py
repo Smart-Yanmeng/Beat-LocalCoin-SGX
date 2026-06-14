@@ -1,7 +1,8 @@
 __author__ = 'aluex'
 
-import pickle
-from gevent import socket, monkey
+import os
+import base64
+from gevent import monkey
 
 from gevent import Greenlet
 from gevent.queue import Queue
@@ -20,95 +21,11 @@ import gevent
 
 monkey.patch_all()
 
+_SGX_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_SGX_DATA_DIR = os.path.join(_SGX_BASE_DIR, 'sgx')
+_TR_SIZE = 250
 
-def get_rbc_counter_from_SGX(host='127.0.0.1', port=65437, obj=None) -> bytes:
-    """
-    使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器（不使用长度头）
-    """
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
-
-    try:
-        # 1. 序列化对象
-        serialized_data = pickle.dumps(obj)
-
-        # 2. 发送数据
-        client_socket.sendall(serialized_data)
-        client_socket.shutdown(socket.SHUT_WR)  # 通知服务端数据已发完
-
-        # 3. 接收完整响应（直到服务端关闭连接）
-        response_data = bytearray()
-        while True:
-            chunk = client_socket.recv(4096)
-            if not chunk:
-                break
-            response_data.extend(chunk)
-
-        # 4. 反序列化响应对象
-        return pickle.loads(response_data)
-
-    finally:
-        client_socket.close()
-
-
-def get_recovered_syncedTx_from_SGX(host='127.0.0.1', port=65436, obj=None):
-    """
-    使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器（不使用长度头）
-    """
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
-
-    try:
-        # 1. 序列化对象
-        serialized_data = pickle.dumps(obj)
-
-        # 2. 发送数据
-        client_socket.sendall(serialized_data)
-        client_socket.shutdown(socket.SHUT_WR)  # 通知服务端数据已发完
-
-        # 3. 接收完整响应（直到服务端关闭连接）
-        response_data = bytearray()
-        while True:
-            chunk = client_socket.recv(4096)
-            if not chunk:
-                break
-            response_data.extend(chunk)
-
-        # 4. 反序列化响应对象
-        return pickle.loads(response_data)
-
-    finally:
-        client_socket.close()
-
-
-def get_encrypted_B_from_SGX(host='127.0.0.1', port=65436, obj=None):
-    """
-    使用 gevent socket + pickle 发送任意 Python 对象到 SGX 服务器（不使用长度头）
-    """
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))
-
-    try:
-        # 1. 序列化对象
-        serialized_data = pickle.dumps(obj)
-
-        # 2. 发送数据
-        client_socket.sendall(serialized_data)
-        client_socket.shutdown(socket.SHUT_WR)  # 通知服务端数据已发完
-
-        # 3. 接收完整响应（直到服务端关闭连接）
-        response_data = bytearray()
-        while True:
-            chunk = client_socket.recv(4096)
-            if not chunk:
-                break
-            response_data.extend(chunk)
-
-        # 4. 反序列化响应对象
-        return pickle.loads(response_data)
-
-    finally:
-        client_socket.close()
+_sgx_tx_cryptor = Cryptor()
 
 
 def calcSum(dd):
@@ -147,7 +64,7 @@ def ceil(x):
 
 def dummyHash(x):  # TODO: replace this guy with good ones
     if isinstance(x, str):
-        return int(x.encode('hex'), 16)
+        return int(x.encode().hex(), 16)
     return x + 1
 
 
@@ -236,7 +153,7 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
         reconstDone = [False] * N
         while True:  # main loop
             sender, msgBundle = receive()
-            if msgBundle[0] == 'i' and not signed[sender]:
+            if isinstance(msgBundle, tuple) and len(msgBundle) > 0 and msgBundle[0] == 'i' and not signed[sender]:
 
                 if keys[sender].verify(
                         sha1hash(b''.join([msgBundle[1][0], msgBundle[1][1], b''.join(msgBundle[1][2])])),
@@ -284,14 +201,14 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
                 else:
                     raise ECDSASignatureError()
             elif msgBundle[0] == 'r':
-                ### todo: SGX
                 readyCounter[msgBundle[1]][msgBundle[2]] += 1
-                rbcObj = {
-                    "tmp": readyCounter[msgBundle[1]][msgBundle[2]],
-                    "t": t,
-                    "Threshold2": Threshold2
-                }
-                result = get_rbc_counter_from_SGX(obj=rbcObj)
+                tmp = readyCounter[msgBundle[1]][msgBundle[2]]
+                if tmp >= t + 1:
+                    result = 1
+                elif tmp >= Threshold2:
+                    result = 2
+                else:
+                    result = 0
 
                 if result == 1 and not readySent[msgBundle[1]]:  # Aux message
                     readySent[msgBundle[1]] = True
@@ -334,52 +251,6 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
                     # time.sleep(60)
                     if outputs[msgBundle[1]].empty():
                         outputs[msgBundle[1]].put(buf)
-
-                ### todo: None SGX
-                # readyCounter[msgBundle[1]][msgBundle[2]] += 1
-                # tmp = readyCounter[msgBundle[1]][msgBundle[2]]
-                #
-                # if tmp >= t + 1 and not readySent[msgBundle[1]]:  # Aux message
-                #     readySent[msgBundle[1]] = True
-                #     broadcast(('r', msgBundle[1], msgBundle[2]))
-                # if (tmp >= Threshold2 and
-                #         not outputs[msgBundle[1]].full() and
-                #         not reconstDone[msgBundle[1]] and
-                #         len(opinions[msgBundle[1]]) >= Threshold):
-                #     reconstDone[msgBundle[1]] = True
-                #     if msgBundle[1] in rootHashes:
-                #         if rootHashes[msgBundle[1]] != msgBundle[2]:
-                #             print("Cheating caught, exiting")
-                #             sys.exit(0)
-                #     else:
-                #         rootHashes[msgBundle[1]] = msgBundle[2]
-                #     if list(opinions[msgBundle[1]].values())[0] == '':
-                #         reconstruction = ['']
-                #     else:
-                #         # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                #         reconstruction = zfecDecoder.decode(list(opinions[msgBundle[1]].values())[:Threshold],
-                #                                             list(opinions[msgBundle[1]].keys())[
-                #                                             :Threshold])  # We only take the first [Threshold] fragments
-                #
-                #     # print("3---", pid, buf)
-                #     m = b''.join(reconstruction)
-                #     padlen = K - m[-1]
-                #     m = m[:-padlen]
-                #     buf = m
-                #
-                #     assert K <= 256  # TODO: Record this assumption!
-                #     # pad m to a multiple of K bytes
-                #     padlen = K - (len(buf) % K)
-                #     buf += padlen * chr(K - padlen).encode()
-                #     step = len(buf) // K
-                #     blocks = [buf[i * step: (i + 1) * step] for i in range(K)]
-                #     encodedFragList = zfecEncoder.encode(blocks)
-                #     mt = merkleTree(encodedFragList)
-                #
-                #     assert rootHashes[msgBundle[1]] == mt[1]  # full binary tree
-                #     # time.sleep(60)
-                #     if outputs[msgBundle[1]].empty():
-                #         outputs[msgBundle[1]].put(buf)
 
     greenletPacker(Greenlet(Listener), 'multiSigBr.Listener', (pid, N, t, msg, broadcast, receive, outputs)).start()
     buf = msg  # We already assumed the proposals are byte strings
@@ -501,7 +372,9 @@ finishcount = 0
 lock.put(1)
 
 cryptor = Cryptor()
-aes_key = cryptor.load_aes_key_from_file("/mnt/c/Users/yorky/Desktop/Project/Beat-LocalCoin-SGX/adaptive/sgx/aes.key")
+aes_key = _sgx_tx_cryptor.load_aes_key_from_file(
+    os.path.join(_SGX_DATA_DIR, "aes.key")
+)
 
 
 @greenletFunction
@@ -554,7 +427,6 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
 
         if op == "IncludeTransaction":
             if isinstance(msg, Transaction):
-                # transactionCache.add(msg)
                 transactionCache.append(msg)
             elif isinstance(msg, set):
                 for tx in msg:
@@ -564,14 +436,13 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
         elif op == "Halt":
             break
         elif op == "Msg":
-            broadcast(eval(msg))  # now the msg is something we mannually send
+            broadcast(eval(msg))
 
         mylog("timestampB (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
 
-        if len(transactionCache) < B:  # Let's wait for many transactions. : )
+        if len(transactionCache) < B:
             time.sleep(0.5)
             print("Not enough transactions", len(transactionCache))
-
             continue
 
         # 随机提案
@@ -616,59 +487,18 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
         ### todo: None-SGX
         # for i in range(N):
         #     probe(i)
-        # for i, c in enumerate(commonSet):  # stx is the same for every party
-        #     if c:
-        #         one, two, three, four, five, six = deserializeEnc(proposals[i][:ENC_SERIALIZED_LENGTH])
-        #         print("----> DEC <----")
-        #         # print(one)
-        #         # print(two)
-        #         # print(three)
-        #         # print(four)
-        #         # print(five)
-        #         # print(six)
-        #         # share = encSKs[pid].decrypt_share(deserializeEnc(proposals[i][:ENC_SERIALIZED_LENGTH]))
-        #         share = encSKs[pid].decrypt_share(one, two, three, four, five, six)
-        #         # print("share ---> ", share)
-        #         broadcast(('O', i, share))
-
         # mylog("timestampIE2 (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
         recoveredSyncedTxList = []
 
         def prepareTx(i, c):
-            ### todo: None-SGX 门限解密
-            # rec = locks[i].get()
-            # encodedTxSet = decrypt(rec.encode("ISO-8859-1"), ((proposals[i].decode("ISO-8859-1"))[ENC_SERIALIZED_LENGTH:len(proposals[i].decode("ISO-8859-1")) - 1]).encode("ISO-8859-1"))
-            # assert len(encodedTxSet) % TR_SIZE == 0
-            # recoveredSyncedTx = [encodedTxSet[i:i + TR_SIZE] for i in range(0, len(encodedTxSet), TR_SIZE)]
-            # print("len(recoveredSyncedTx) ---> ", len(recoveredSyncedTx))
-            # print("recoveredSyncedTx ---> ", recoveredSyncedTx)
-            # recoveredSyncedTxList.append(recoveredSyncedTx)
-
-            ### todo: SGX
-            txObj = {
-                "vote": c,
-                "proposal": proposals[i]
-            }
-
-            recoveredSyncedTx = get_recovered_syncedTx_from_SGX(obj=txObj)
+            if c != 1:
+                recoveredSyncedTx = []
+            else:
+                aesKeyFromEncrypted = _sgx_tx_cryptor.decrypt_rsa(proposals[i][:256])
+                encodedTxSet = _sgx_tx_cryptor.decrypt_aes(proposals[i][256:].rstrip(b'\x01'), aesKeyFromEncrypted)
+                assert len(encodedTxSet) % _TR_SIZE == 0
+                recoveredSyncedTx = [encodedTxSet[j:j + _TR_SIZE] for j in range(0, len(encodedTxSet), _TR_SIZE)]
             recoveredSyncedTxList.append(recoveredSyncedTx)
-
-            ### todo: None-SGX RSA 解密
-            # aesKeyFromEncrypted = cryptor.decrypt_rsa(proposals[i][:256])
-            # encodedTxSet = cryptor.decrypt_aes(proposals[i][256:].rstrip(b'\x01'), aesKeyFromEncrypted)
-            #
-            # assert len(encodedTxSet) % TR_SIZE == 0
-            #
-            # recoveredSyncedTx = [encodedTxSet[i:i + TR_SIZE] for i in range(0, len(encodedTxSet), TR_SIZE)]
-            # recoveredSyncedTxList.append(recoveredSyncedTx)
-            #
-            # print("proposals[i] ---> ", i, proposals[i])
-            # print("aesKeyFromEncrypted ---> ", aesKeyFromEncrypted)
-            # print("proposals[i][256:] ---> ", proposals[i][256:])
-            # print("len(encodedTxSet) ---> ", len(encodedTxSet))
-            # print("encodedTxSet ---> ", encodedTxSet)
-            # print("len(encodedTxSet) ---> ", len(encodedTxSet))
-            # print("recoveredSyncedTx ---> ", recoveredSyncedTx)
 
         thList = []
         for i, c in enumerate(commonSet):  # stx is the same for every party

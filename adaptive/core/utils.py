@@ -12,7 +12,7 @@ import gc
 import traceback
 import pickle as cPickle
 import struct
-from ..ecdsa.ecdsa_ssl import KEY
+from ..ecdsa.ecdsa_pure import KEY
 import os
 from ..commoncoin import thresprf as thresprf
 from ..threshenc.tdh2 import serialize, serialize1, deserialize, deserialize0, deserialize1, deserialize2, TDHPublicKey, \
