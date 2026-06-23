@@ -2,6 +2,10 @@
 
 > CODE BASED ON ***HONEYBADGER*** PROJECT [> LINK <](https://github.com/amiller/HoneyBadgerBFT)
 
+## License
+
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+
 ## The latest test
 ### Standalone
 Test on ***WSL2*** \[ 24H2 with kernel **5.15.167.4-microsoft-standard-WSL2 (Ubuntu 24.04)** ] </br>
