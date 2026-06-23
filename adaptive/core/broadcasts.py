@@ -44,6 +44,7 @@ def reliable_broadcast(pid, N, t, broadcast, receive, output):
         readySent = [False] * N
         sentEcho = [False] * N
         result = {}
+        local_broadcast_counter = defaultdict(lambda: defaultdict(lambda: 0))
 
         while True:  # main loop
             msgBundle = receive()
@@ -59,8 +60,8 @@ def reliable_broadcast(pid, N, t, broadcast, receive, output):
                     broadcast(('r', msgBundle[1], msgBundle[3]))
 
             elif msgBundle[0] == 'r':  # ready phase
-                _sgx_broadcast_counter[msgBundle[1]][msgBundle[2]] += 1
-                tmp = _sgx_broadcast_counter[msgBundle[1]][msgBundle[2]]
+                local_broadcast_counter[msgBundle[1]][msgBundle[2]] += 1
+                tmp = local_broadcast_counter[msgBundle[1]][msgBundle[2]]
                 sgx_result = 0
                 if tmp >= t + 1:
                     sgx_result = 1
@@ -91,11 +92,11 @@ def reliable_broadcast1(pid, N, t, broadcast, receive, output):
         readySent = [False] * N
         sentEcho = [False] * N
         result = {}
+        local_broadcast_counter = defaultdict(lambda: defaultdict(lambda: 0))
 
         while True:  # main loop
             msgBundle = receive()
-            # print("msgBundle", msgBundle)  # msgBundle 0
-            if msgBundle[0] == 'i' and not sentEcho[msgBundle[1]]:  # 整数不可索引
+            if msgBundle[0] == 'i' and not sentEcho[msgBundle[1]]:
                 sentEcho[msgBundle[1]] = True
                 broadcast(('e', msgBundle[1], pid, msgBundle[2]))
 
@@ -106,8 +107,8 @@ def reliable_broadcast1(pid, N, t, broadcast, receive, output):
                     broadcast(('r', msgBundle[1], msgBundle[3]))
 
             elif msgBundle[0] == 'r':  # ready phase
-                _sgx_broadcast_counter[msgBundle[1]][msgBundle[2]] += 1
-                tmp = _sgx_broadcast_counter[msgBundle[1]][msgBundle[2]]
+                local_broadcast_counter[msgBundle[1]][msgBundle[2]] += 1
+                tmp = local_broadcast_counter[msgBundle[1]][msgBundle[2]]
                 sgx_result = 0
                 if tmp >= t + 1:
                     sgx_result = 1
@@ -138,6 +139,7 @@ def reliable_broadcast2(pid, N, t, broadcast, receive, output):
         readySent = [False] * N
         sentEcho = [False] * N
         result = {}
+        local_broadcast_counter = defaultdict(lambda: defaultdict(lambda: 0))
 
         while True:  # main loop
 
@@ -153,8 +155,8 @@ def reliable_broadcast2(pid, N, t, broadcast, receive, output):
                     broadcast(('r', msgBundle[1], msgBundle[3]))
 
             elif msgBundle[0] == 'r':  # ready phase
-                _sgx_broadcast_counter[msgBundle[1]][msgBundle[2]] += 1
-                tmp = _sgx_broadcast_counter[msgBundle[1]][msgBundle[2]]
+                local_broadcast_counter[msgBundle[1]][msgBundle[2]] += 1
+                tmp = local_broadcast_counter[msgBundle[1]][msgBundle[2]]
                 sgx_result = 0
                 if tmp >= t + 1:
                     sgx_result = 1
@@ -433,32 +435,22 @@ def local_binary_consensus(instance, pid, N, t, vi, decide, broadcast, receive):
     :param receive:
     :return:
     """
-    bcQB = defaultdict(lambda: Queue(1))
-    bcQA = defaultdict(lambda: Queue(1))
-    bcQC = defaultdict(lambda: Queue(1))
+    bcQB = defaultdict(lambda: Queue())
+    bcQA = defaultdict(lambda: Queue())
+    bcQC = defaultdict(lambda: Queue())
 
     def _recv():
         while True:
             (i, (tag, m)) = receive()
             if tag == 'B':
-                # Broadcast message
                 r, msg = m
-                # print("local:m",m) # m (1, 0)
-                # print("local:r",r, "msg",msg) #:r 1 msg 0
-                greenletPacker(Greenlet(bcQB[r].put, msg),
-                               'local_binary_consensus.bcQB[%d].put' % r,
-                               (pid, N, t, vi, decide, broadcast, receive)).start()  # In case they block the router
+                bcQB[r].put(msg)
             elif tag == 'A':
                 r, msg = m
-                greenletPacker(Greenlet(bcQA[r].put, msg),
-                               'local_binary_consensus.bcQA[%d].put' % r,
-                               (pid, N, t, vi, decide, broadcast, receive)).start()  # In case they block the router
+                bcQA[r].put(msg)
             elif tag == 'C':
                 r, msg = m
-                greenletPacker(Greenlet(bcQC[r].put, msg),
-                               'local_binary_consensus.bcQC[%d].put' % r,
-                               (pid, N, t, vi, decide, broadcast, receive)).start()  # In case they block the router
-                pass
+                bcQC[r].put(msg)
 
     greenletPacker(Greenlet(_recv), 'local_binary_consensus._recv', (pid, N, t, vi, decide, broadcast, receive)).start()
 

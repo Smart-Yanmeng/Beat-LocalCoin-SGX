@@ -227,39 +227,38 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
                     if list(opinions[msgBundle[1]].values())[0] == '':
                         reconstruction = ['']
                     else:
-                        # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                         reconstruction = zfecDecoder.decode(list(opinions[msgBundle[1]].values())[:Threshold],
                                                             list(opinions[msgBundle[1]].keys())[
                                                             :Threshold])  # We only take the first [Threshold] fragments
+                        gevent.sleep(0)  # yield after zfec decode
 
-                    # print("3---", pid, buf)
                     m = b''.join(reconstruction)
-                    padlen = K - m[-1]
+                    padlen = m[-1]
                     m = m[:-padlen]
+                    unpadded = m
                     buf = m
 
                     assert K <= 256  # TODO: Record this assumption!
-                    # pad m to a multiple of K bytes
-                    padlen = K - (len(buf) % K)
-                    buf += padlen * chr(K - padlen).encode()
+                    # re-pad for merkle verification (same as sender)
+                    repadlen = K - (len(buf) % K)
+                    buf = buf + repadlen * chr(repadlen).encode()
                     step = len(buf) // K
                     blocks = [buf[i * step: (i + 1) * step] for i in range(K)]
                     encodedFragList = zfecEncoder.encode(blocks)
                     mt = merkleTree(encodedFragList)
+                    gevent.sleep(0)  # yield after zfec encode
 
                     assert rootHashes[msgBundle[1]] == mt[1]  # full binary tree
-                    # time.sleep(60)
                     if outputs[msgBundle[1]].empty():
-                        outputs[msgBundle[1]].put(buf)
+                        outputs[msgBundle[1]].put(unpadded)
 
     greenletPacker(Greenlet(Listener), 'multiSigBr.Listener', (pid, N, t, msg, broadcast, receive, outputs)).start()
     buf = msg  # We already assumed the proposals are byte strings
-    # print("buf ---> ", pid, buf)
 
     assert K <= 256  # TODO: Record this assumption!
     # pad m to a multiple of K bytes
     padlen = K - (len(buf) % K)
-    buf += padlen * chr(1).encode()
+    buf += padlen * chr(padlen).encode()
     step = len(buf) // K
 
     blocks = [buf[i * step: (i + 1) * step] for i in range(K)]
@@ -274,6 +273,7 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
         # 签名发送
         send(i,
              ('i', newBundle, keys[pid].sign(sha1hash(b''.join([newBundle[0], newBundle[1], b''.join(newBundle[2])])))))
+        gevent.sleep(0)  # yield to allow socket handlers to run
 
 
 @greenletFunction
@@ -317,14 +317,9 @@ def includeTransaction(pid, N, t, setToInclude, broadcast, receive, send):
         while True:
             sender, (tag, m) = receive()
             if tag == 'B':
-                greenletPacker(Greenlet(CBChannel.put, (sender, m)),
-                               'includeTransaction.CBChannel.put',
-                               (pid, N, t, setToInclude, broadcast, receive)).start()
+                CBChannel.put((sender, m))
             elif tag == 'A':
-                greenletPacker(Greenlet(ACSChannel.put,
-                                        (sender, m)
-                                        ), 'includeTransaction.ACSChannel.put',
-                               (pid, N, t, setToInclude, broadcast, receive)).start()
+                ACSChannel.put((sender, m))
 
     outputChannel = [Queue(1) for _ in range(N)]
 
@@ -448,14 +443,8 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
         # 随机提案
         oldest_B = transactionCache[:B]
         selected_B = random.sample(oldest_B, int(min(B / N, len(oldest_B))))
-        # print("len(selected_B) ---> ", len(b''.join(selected_B)))
-        # print("selected_B ---> ", selected_B)
-
-        # aesKey = random._urandom(32)
-        # label = "1"
 
         # RSA 加密
-        # 使用 RSA 加密 AES 密钥，用 AES 密钥加密 selected_B
         encrypted_B = cryptor.encrypt_aes(b''.join(selected_B), aes_key)
         encryptedAESKey = cryptor.encrypt_rsa(aes_key)
         proposal = encryptedAESKey + encrypted_B
@@ -475,9 +464,6 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
         # mylog("timestampIB (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
 
         tb1 = time.time()  # beginning of the protocol
-
-        # print("\033[33m----------=- Transaction Queue -=----------\033[0m")
-        # print(includeTransactionChannel.get)
 
         commonSet, proposals = includeTransaction(pid, N, t, proposal, broadcast, includeTransactionChannel.get, send)
         # print("proposals ---> ", proposals)
