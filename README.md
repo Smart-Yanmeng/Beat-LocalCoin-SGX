@@ -112,17 +112,6 @@ cat benchmark_none_sgx_vs_beat.csv
 | `-t` | 容忍的恶意节点数 | `-t 1` |
 | `-b` | 每轮提议的交易数量 | `-b 100` |
 
-## 基准测试结果
-
-本分支包含多个基准测试结果文件：
-
-- `benchmark_all.csv` - 完整基准测试结果
-- `benchmark_none_sgx_vs_beat.csv` - None-SGX 与 BEAT 对比
-- `benchmark_results.csv` - 测试结果汇总
-- `benchmark_results.txt` - 测试结果文本
-- `benchmark_small_b.csv` - 小规模 B 值测试
-- `benchmark_small_b_all.csv` - 小规模 B 值完整测试
-
 ## 致谢
 
 本项目基于 [HoneyBadgerBFT](https://github.com/amiller/HoneyBadgerBFT) 项目开发。
