@@ -118,20 +118,6 @@ Beat-LocalCoin-SGX/
 └── README.md
 ```
 
-## 测试结果
-
-### 单机测试环境
-- 操作系统：WSL2 Ubuntu 24.04
-- Python：3.8
-- Charm：1.5
-
-### 分布式测试环境
-- 4台阿里云服务器 - Ubuntu 22.04
-- SGX：1.22
-- Python：3.8
-- Charm：1.5
-- Gramine：1.8
-
 ## 致谢
 
 本项目基于 [HoneyBadgerBFT](https://github.com/amiller/HoneyBadgerBFT) 项目开发。
