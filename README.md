@@ -41,7 +41,7 @@ Beat-LocalCoin-SGX/
 
 ### Python 版本
 
-- **最低要求**: Python 3.8+
+- **最低要求**: Python 3.8
 - **推荐**: Python 3.10+
 
 ### 依赖
