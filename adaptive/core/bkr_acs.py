@@ -1,11 +1,10 @@
-import base64
-import os
 from gevent import monkey
-from adaptive.sgx.cryptor import Cryptor
 
 monkey.patch_all()
 
-from .broadcasts import initBeforeBinaryConsensus, local_binary_consensus
+# from .broadcasts import initBeforeBinaryConsensus, cobalt_binary_consensus, binary_consensus, fast_binary_consensus, \
+#     local_binary_consensus
+from .broadcasts import initBeforeBinaryConsensus, local_binary_consensus, binary_consensus,fast_binary_consensus
 from .utils import myRandom as random
 from gevent import Greenlet
 import gevent
@@ -17,20 +16,11 @@ lockBA = Queue(1)
 defaultBA = []
 lockBA.put(1)
 
-_SGX_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_SGX_DATA_DIR = os.path.join(_SGX_BASE_DIR, 'sgx')
-
-cryptor = Cryptor()
-aes_key = cryptor.load_aes_key_from_file(
-    os.path.join(_SGX_DATA_DIR, "aes.key")
-)
-
 
 def acs(pid, N, t, Q, broadcast, receive):
     version = 1
     assert (isinstance(Q, list))
     assert (len(Q) == N)
-    # 存放投票，此投票需要对外部完全透明
     decideChannel = [Queue(1) for _ in range(N)]
     receivedChannelsFlags = []
 
@@ -49,12 +39,8 @@ def acs(pid, N, t, Q, broadcast, receive):
                 if len(receivedChannelsFlags) >= N - t:
                     locker2.put("Key")
                 if version == 1:
-                    # todo: 利用 SGX 的公钥加密提案
-                    # encrypted_vote = cryptor.encrypt_aes_b64("1", aes_key)
-                    encrypted_vote = base64.b16encode(cryptor.encrypt_rsa((1).to_bytes(1, "big"))).decode("utf-8")
-
                     greenletPacker(Greenlet(local_binary_consensus, i, pid,
-                                            N, t, encrypted_vote, decideChannel[i], make_bc(i),
+                                            N, t, 0, decideChannel[i], make_bc(i),
                                             reliableBroadcastReceiveQueue[i].get),
                                    'acs.callbackFactory.binary_consensus', (pid, N, t, Q, broadcast, receive)).start()
                 # if version == 2:
@@ -63,10 +49,10 @@ def acs(pid, N, t, Q, broadcast, receive):
                 #                             reliableBroadcastReceiveQueue[i].get),
                 #                    'acs.callbackFactory.fast_binary_consensus',
                 #                    (pid, N, t, Q, broadcast, receive)).start()
-                # if version == 2:
-                #     greenletPacker(Greenlet(binary_consensus, i, pid,
-                #                             N, t, encrypted_vote, decideChannel[i], make_bc(i), reliableBroadcastReceiveQueue[i].get),
-                #                    'acs.callbackFactory.binary_consensus', (pid, N, t, Q, broadcast, receive)).start()
+                if version == 2:
+                    greenletPacker(Greenlet(binary_consensus, i, pid,
+                                            N, t, 1, decideChannel[i], make_bc(i), reliableBroadcastReceiveQueue[i].get),
+                                   'acs.callbackFactory.binary_consensus', (pid, N, t, Q, broadcast, receive)).start()
 
                 # elif version == 4:
                 #     greenletPacker(Greenlet(cobalt_binary_consensus, i, pid,
@@ -107,22 +93,18 @@ def acs(pid, N, t, Q, broadcast, receive):
         if not i in receivedChannelsFlags:
             # print "................sent?"
             receivedChannelsFlags.append(i)
-
-            ### todo: 用 SGX 的公钥加密提案
-            encrypted_vote = base64.b16encode(cryptor.encrypt_rsa((0).to_bytes(1, "big"))).decode("utf-8")
-
             if version == 1:
-                greenletPacker(Greenlet(local_binary_consensus, i, pid, N, t, encrypted_vote,
+                greenletPacker(Greenlet(local_binary_consensus, i, pid, N, t, 1,
                                         decideChannel[i], make_bc(i), reliableBroadcastReceiveQueue[i].get),
                                'acs.binary_consensus', (pid, N, t, Q, broadcast, receive)).start()
             # elif version == 2:
             #     greenletPacker(Greenlet(fast_binary_consensus, i, pid, N, t, 0,
             #                             decideChannel[i], make_bc(i), reliableBroadcastReceiveQueue[i].get),
             #                    'acs.fast_binary_consensus', (pid, N, t, Q, broadcast, receive)).start()
-            # elif version == 2:
-            #     greenletPacker(Greenlet(binary_consensus, i, pid, N, t, 0,
-            #                             decideChannel[i], make_bc(i), reliableBroadcastReceiveQueue[i].get),
-            #                    'acs.cobalt_binary_consensus', (pid, N, t, Q, broadcast, receive)).start()
+            elif version == 2:
+                greenletPacker(Greenlet(binary_consensus, i, pid, N, t, 0,
+                                        decideChannel[i], make_bc(i), reliableBroadcastReceiveQueue[i].get),
+                               'acs.cobalt_binary_consensus', (pid, N, t, Q, broadcast, receive)).start()
 
     def listenerFactory(i, channel):
         def _listener():
@@ -148,56 +130,57 @@ def acs(pid, N, t, Q, broadcast, receive):
     return BA
 
 
-# def checkBA(BA, N, t):
-#     global defaultBA
-#     print("......................", BA)
-#     if sum(BA) < N - t:  # If acs failed, we use a pre-set default common subset
-#         raise ACSException
-#     return BA
+def checkBA(BA, N, t):
+    global defaultBA
+    print("......................", BA)
+    if sum(BA) < N - t:  # If acs failed, we use a pre-set default common subset
+        raise ACSException
+    return BA
 
 
-# def random_delay_acs(N, t, inputs):
-#     assert (isinstance(inputs, list))
-#
-#     maxdelay = 0.01
-#
-#     # Instantiate the "broadcast" instruction
-#     def makeBroadcast(i):
-#         def _broadcast(v):
-#             def _deliver(j):
-#                 buffers[j].put((i, v))
-#
-#             for j in range(N):
-#                 greenletPacker(Greenlet(_deliver, j),
-#                                'random_delay_acs._deliver', (N, t, inputs)).start_later(random.random() * maxdelay)
-#
-#         return _broadcast
-#
-#     def modifyMonitoredInt(monitoredInt):
-#         monitoredInt.data = 1
-#
-#     while True:
-#         initBeforeBinaryConsensus()
-#         buffers = map(lambda _: Queue(1), range(N))
-#         ts = []
-#         for i in range(N):
-#             bc = makeBroadcast(i)
-#             recv = buffers[i].get
-#             input_clone = [MonitoredInt() for _ in range(N)]
-#             for j in range(N):
-#                 greenletPacker(Greenlet(modifyMonitoredInt, input_clone[j]),
-#                                'random_delay_acs.modifyMonitoredInt', (N, t, inputs)).start_later(
-#                     maxdelay * random.random())
-#             th = greenletPacker(Greenlet(acs, i, N, t, input_clone, bc, recv), 'random_delay_acs.acs', (N, t, inputs))
-#             th.start()  # start_later(random.random() * maxdelay) is not necessary here
-#             ts.append(th)
-#
-#         # if True:
-#         try:
-#             gevent.joinall(ts)
-#             break
-#         except gevent.hub.LoopExit:  # Manual fix for early stop
-#             print("End")
+def random_delay_acs(N, t, inputs):
+    assert (isinstance(inputs, list))
+
+    maxdelay = 0.01
+
+    # Instantiate the "broadcast" instruction
+    def makeBroadcast(i):
+        def _broadcast(v):
+            def _deliver(j):
+                buffers[j].put((i, v))
+
+            for j in range(N):
+                greenletPacker(Greenlet(_deliver, j),
+                               'random_delay_acs._deliver', (N, t, inputs)).start_later(random.random() * maxdelay)
+
+        return _broadcast
+
+    def modifyMonitoredInt(monitoredInt):
+        monitoredInt.data = 1
+
+    while True:
+        initBeforeBinaryConsensus()
+        buffers = map(lambda _: Queue(1), range(N))
+        ts = []
+        for i in range(N):
+            bc = makeBroadcast(i)
+            recv = buffers[i].get
+            input_clone = [MonitoredInt() for _ in range(N)]
+            for j in range(N):
+                greenletPacker(Greenlet(modifyMonitoredInt, input_clone[j]),
+                               'random_delay_acs.modifyMonitoredInt', (N, t, inputs)).start_later(
+                    maxdelay * random.random())
+            th = greenletPacker(Greenlet(acs, i, N, t, input_clone, bc, recv), 'random_delay_acs.acs', (N, t, inputs))
+            th.start()  # start_later(random.random() * maxdelay) is not necessary here
+            ts.append(th)
+
+        # if True:
+        try:
+            gevent.joinall(ts)
+            break
+        except gevent.hub.LoopExit:  # Manual fix for early stop
+            print
+            "End"
 
 
 if __name__ == '__main__':
@@ -207,4 +190,5 @@ if __name__ == '__main__':
     print("Testing ACS with different inputs...")
     Q = [1] * (2 * 1 + 1 + 1) + [0] * 1
     random.shuffle(Q)
-    # random_delay_acs(5, 1, Q)
+    random_delay_acs(5, 1, Q)
+

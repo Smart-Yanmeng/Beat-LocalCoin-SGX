@@ -1,6 +1,6 @@
 from charm.toolbox.ecgroup import ECGroup, ZR, G
 from charm.toolbox.eccurve import prime256v1
-from base64 import encodebytes as encodestring, decodebytes as decodestring
+from base64 import encodestring, decodestring
 from functools import reduce
 import random
 import time
@@ -115,7 +115,7 @@ class TPRFPrivateKey(TPRFPublicKey):
         return (g_i_1, c, z)
 
 
-def dealer(players=4, k=2):
+def dealer(players=10, k=5):
     # Random polynomial coefficients
     secret = group.random()
     a = [secret]

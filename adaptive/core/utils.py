@@ -1,4 +1,6 @@
 import json
+import pkg_resources
+from Crypto.Hash import SHA256
 
 from gevent import monkey
 
@@ -176,7 +178,6 @@ def deepEncode(mc, m):
         buf.write(serialize(share[2]))
     else:
         (tag, c) = bundle #tag:外层  'A' c:
-        # print("c is ",c)
         # totally we have 4 msg types
         if c[0] == 'i': #Init
             buf.write(b'\x01')
@@ -205,7 +206,6 @@ def deepEncode(mc, m):
             buf.write(hm)
         else:
             p1, (t2, m2) = c
-            # print("t2=", t2) # t2=B
             if t2 == 'B': #广播,内层消息类型
                 buf.write(b'\x03')
             elif t2 == 'A': #Aux?
@@ -233,9 +233,8 @@ def deepEncode(mc, m):
             (p2, p3) = m2
 
 
-            ### todo: 改变 pack
             p3_json = json.dumps(p3) #str json
-            buf.write(struct.pack('BBH', p1, p2, len(p3_json)))
+            buf.write(struct.pack('BBB', p1, p2, len(p3_json)))
             buf.write(p3_json.encode("ISO-8859-1"))
             # print("p3 is ",p3) # p3 is ('i', 3, 0)
             # buf.write(struct.pack('BBB', p1, p2, p3))
@@ -356,14 +355,14 @@ def deepDecode(m, msgTypeCounter):
         sig = buf.read()
         return mc, (f, t, ('B', ('e', (p2, trSet, rh, mb), sig)),)
     elif msgtype == 3:
-        p1, p2, p3 = struct.unpack('BBH', buf.read(4))
+        p1, p2, p3 = struct.unpack('BBB', buf.read(3))
         #print("msgtype == 3 decode:","p1 is ",p1,"p2 is ",p2,"p3 is ",p3) # p1 is  1 p2 is  1 p3 is  0
         p3_json = buf.read(p3)
         real_p3 = json.loads(p3_json)#decode元组
         return mc, (f, t, ('A', (p1, ('B', (p2, real_p3)))),)
         # return mc, (f, t, ('A', (p1, ('B', (p2, p3)))),)
     elif msgtype == 4:
-        p1, p2, p3 = struct.unpack('BBH', buf.read(4))
+        p1, p2, p3 = struct.unpack('BBB', buf.read(3))
         p3_json = buf.read(p3)
         real_p3 = json.loads(p3_json)
         return mc, (f, t, ('A', (p1, ('A', (p2, real_p3)))),)
@@ -374,7 +373,7 @@ def deepDecode(m, msgTypeCounter):
         # proof_c = thresprf.deserialize(buf.read(SIG_SERIALIZED_1))
         # proof_z = thresprf.deserialize(buf.read())
         # return mc, (f, t, ('A', (p1, ('C', (r, sig, proof_c, proof_z)))))
-        p1, p2, p3 = struct.unpack('BBH', buf.read(4))
+        p1, p2, p3 = struct.unpack('BBB', buf.read(3))
         p3_json = buf.read(p3)
         real_p3 = json.loads(p3_json)
         return mc, (f, t, ('A', (p1, ('C', (p2, real_p3)))),)

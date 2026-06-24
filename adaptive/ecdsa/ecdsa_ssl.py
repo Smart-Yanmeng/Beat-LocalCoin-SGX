@@ -459,9 +459,9 @@ if __name__ == '__main__':
         'a762fbc6ac0921b8f17025bb8458b92794ae87a133894d70d7995fc0b6b5ab90'
 
     k = KEY()
-    k.generate (bytes.fromhex(ec_secret))
+    k.generate (ec_secret.decode('hex'))
     k.set_compressed(True)
-    # print (k.get_privkey ().hex())
-    # print (k.get_pubkey().hex())
-    # print (k.get_secret().hex())
+    print (k.get_privkey ().encode('hex'))
+    print (k.get_pubkey().encode('hex'))
+    print (k.get_secret().encode('hex'))
 

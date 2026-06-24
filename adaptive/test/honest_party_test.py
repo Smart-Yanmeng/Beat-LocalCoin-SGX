@@ -1,4 +1,6 @@
 #!/usr/bin/python
+__author__ = 'aluex'
+
 from gevent import monkey
 
 monkey.patch_all()
@@ -11,7 +13,7 @@ from ..core.bkr_acs import initBeforeBinaryConsensus
 import gevent
 import os
 from ..core.utils import myRandom as random
-from ..core.utils import ACSException, checkExceptionPerGreenlet, encodeTransaction, getKeys, \
+from ..core.utils import ACSException, checkExceptionPerGreenlet, getSignatureCost, encodeTransaction, getKeys, \
     deepEncode, deepDecode, randomTransaction, initiateECDSAKeys, initiateThresholdEnc, finishTransactionLeap
 
 import time
@@ -47,10 +49,7 @@ def logWriter(fileHandler):
         fileHandler.write("%d:%d(%d->%d)[%s]-[%s]%s\n" % (msgCounter, msgSize, msgFrom, msgTo, st, et, content))
         fileHandler.flush()
 
-
-
-# TODO: 加入SGX
-def encode(m):
+def encode(m):  # TODO
     global msgCounter
     msgCounter += 1
     starting_time[msgCounter] = str(time.time())
@@ -69,7 +68,7 @@ def encode(m):
     return result
 
 
-def decode(s):
+def decode(s):  # TODO
     if USE_DEEP_ENCODE:
         result = deepDecode(s, msgTypeCounter)
     else:
@@ -83,6 +82,7 @@ def decode(s):
         logChannel.put((result[0], msgSize[result[0]], msgFrom[result[0]], msgTo[result[0]],
                         starting_time[result[0]], ending_time[result[0]], repr(result[1])))
     return result[1]
+
 
 
 # def client_test_freenet(N, t, version, options):
@@ -120,26 +120,23 @@ def client_test_freenet(N, t, options):
     def makeBroadcast(i):
         def _broadcast(v):
             def _deliver(j):
-                # print("j:", j, "i:", i, "v:", v)  # i,j: int   v: ('A', (2, ('B', (1, ('i', 3, 0)))))
+                print("j:",j, "i:",i, "v:",v) #i,j: int   v: ('A', (2, ('B', (1, ('i', 3, 0)))))
                 buffers[j].put(encode((j, i, v)))
-
             for j in range(N):
                 Greenlet(_deliver, j).start()
-
         return _broadcast
 
     def recvWithDecode(buf):
         def recv():
             s = buf.get()
             return decode(s)[1:]
-
         return recv
 
-    def makeSend(i):  # point to point message delivery
+    def makeSend(i): # point to point message delivery
         def _send(j, v):
             buffers[j].put(encode((j, i, v)))
-
         return _send
+
 
     while True:
         initBeforeBinaryConsensus()

@@ -1,31 +1,19 @@
 __author__ = 'aluex'
 
-import os
-import base64
-from gevent import monkey
-
 from gevent import Greenlet
-from gevent.queue import Queue
+from gevent.queue import Queue, Empty
 from .bkr_acs import acs
 from .utils import mylog, MonitoredInt, callBackWrap, greenletFunction, \
-    greenletPacker, getEncKeys, Transaction, getECDSAKeys, sha1hash
+    greenletPacker, getEncKeys, Transaction, getECDSAKeys, sha1hash, TR_SIZE
 from collections import defaultdict
 import zfec
 import hashlib
-
-from ..sgx.cryptor import Cryptor
-from .utils import deserializeEnc, ENC_SERIALIZED_LENGTH
+from ..threshenc.tdh2 import encrypt, decrypt
+from .utils import serializeEnc, deserializeEnc, ENC_SERIALIZED_LENGTH
 import random
 import itertools
 import gevent
-
-monkey.patch_all()
-
-_SGX_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_SGX_DATA_DIR = os.path.join(_SGX_BASE_DIR, 'sgx')
-_TR_SIZE = 250
-
-_sgx_tx_cryptor = Cryptor()
+import time
 
 
 def calcSum(dd):
@@ -64,7 +52,7 @@ def ceil(x):
 
 def dummyHash(x):  # TODO: replace this guy with good ones
     if isinstance(x, str):
-        return int(x.encode().hex(), 16)
+        return int(x.encode('hex'), 16)
     return x + 1
 
 
@@ -92,6 +80,7 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
     assert (isinstance(outputs, list))
     for i in outputs:
         assert (isinstance(i, Queue))
+
 
     keys = getECDSAKeys()
     K = Threshold = N - 2 * t
@@ -153,7 +142,7 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
         reconstDone = [False] * N
         while True:  # main loop
             sender, msgBundle = receive()
-            if isinstance(msgBundle, tuple) and len(msgBundle) > 0 and msgBundle[0] == 'i' and not signed[sender]:
+            if msgBundle[0] == 'i' and not signed[sender]:
 
                 if keys[sender].verify(
                         sha1hash(b''.join([msgBundle[1][0], msgBundle[1][1], b''.join(msgBundle[1][2])])),
@@ -201,22 +190,15 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
                 else:
                     raise ECDSASignatureError()
             elif msgBundle[0] == 'r':
+
                 readyCounter[msgBundle[1]][msgBundle[2]] += 1
                 tmp = readyCounter[msgBundle[1]][msgBundle[2]]
-                if tmp >= t + 1:
-                    result = 1
-                elif tmp >= Threshold2:
-                    result = 2
-                else:
-                    result = 0
 
-                if result == 1 and not readySent[msgBundle[1]]:  # Aux message
+                if tmp >= t + 1 and not readySent[msgBundle[1]]:  # Aux message
                     readySent[msgBundle[1]] = True
                     broadcast(('r', msgBundle[1], msgBundle[2]))
-                if (result == 1 or result == 2 and
-                        not outputs[msgBundle[1]].full() and
-                        not reconstDone[msgBundle[1]] and
-                        len(opinions[msgBundle[1]]) >= Threshold):
+                if tmp >= Threshold2 and not outputs[msgBundle[1]].full() and \
+                        not reconstDone[msgBundle[1]] and len(opinions[msgBundle[1]]) >= Threshold:
                     reconstDone[msgBundle[1]] = True
                     if msgBundle[1] in rootHashes:
                         if rootHashes[msgBundle[1]] != msgBundle[2]:
@@ -227,38 +209,42 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
                     if list(opinions[msgBundle[1]].values())[0] == '':
                         reconstruction = ['']
                     else:
+                        # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                         reconstruction = zfecDecoder.decode(list(opinions[msgBundle[1]].values())[:Threshold],
                                                             list(opinions[msgBundle[1]].keys())[
                                                             :Threshold])  # We only take the first [Threshold] fragments
-                        gevent.sleep(0)  # yield after zfec decode
 
+                    '''rawbuf = b''.join(reconstruction)
+
+                    buf = rawbuf[:-rawbuf[-1]]'''
+                    # print("3---", pid, buf)
                     m = b''.join(reconstruction)
-                    padlen = m[-1]
+                    padlen = K - m[-1]
                     m = m[:-padlen]
-                    unpadded = m
                     buf = m
 
                     assert K <= 256  # TODO: Record this assumption!
-                    # re-pad for merkle verification (same as sender)
-                    repadlen = K - (len(buf) % K)
-                    buf = buf + repadlen * chr(repadlen).encode()
+                    # pad m to a multiple of K bytes
+                    padlen = K - (len(buf) % K)
+                    buf += padlen * chr(K - padlen).encode()
                     step = len(buf) // K
                     blocks = [buf[i * step: (i + 1) * step] for i in range(K)]
                     encodedFragList = zfecEncoder.encode(blocks)
                     mt = merkleTree(encodedFragList)
-                    gevent.sleep(0)  # yield after zfec encode
 
                     assert rootHashes[msgBundle[1]] == mt[1]  # full binary tree
+                    # time.sleep(60)
                     if outputs[msgBundle[1]].empty():
-                        outputs[msgBundle[1]].put(unpadded)
+                        outputs[msgBundle[1]].put(buf)
 
     greenletPacker(Greenlet(Listener), 'multiSigBr.Listener', (pid, N, t, msg, broadcast, receive, outputs)).start()
     buf = msg  # We already assumed the proposals are byte strings
+    # print("2--", pid, buf)
 
     assert K <= 256  # TODO: Record this assumption!
     # pad m to a multiple of K bytes
     padlen = K - (len(buf) % K)
-    buf += padlen * chr(padlen).encode()
+    buf += padlen * chr(K - padlen).encode()
     step = len(buf) // K
 
     blocks = [buf[i * step: (i + 1) * step] for i in range(K)]
@@ -271,22 +257,17 @@ def multiSigBr(pid, N, t, msg, broadcast, receive, outputs, send):
         mb = getMerkleBranch(i, mt)  # notice that index starts from 1 and pid starts from 0
         newBundle = (encodedFragList[i], rootHash, mb)
         # 签名发送
-        send(i,
-             ('i', newBundle, keys[pid].sign(sha1hash(b''.join([newBundle[0], newBundle[1], b''.join(newBundle[2])])))))
-        gevent.sleep(0)  # yield to allow socket handlers to run
-
+        send(i,('i', newBundle, keys[pid].sign(sha1hash(b''.join([newBundle[0], newBundle[1], b''.join(newBundle[2])])))))
 
 @greenletFunction
 def consensusBroadcast(pid, N, t, msg, broadcast, receive, outputs, send, method=multiSigBr):
     return method(pid, N, t, msg, broadcast, receive, outputs, send)
-
 
 def union(listOfTXSet):
     result = set()  # Informal Union: actually we don't know how it compares ...
     for s in listOfTXSet:
         result = result.union(s)
     return result
-
 
 # tx is the transaction we are going to include
 @greenletFunction
@@ -317,9 +298,14 @@ def includeTransaction(pid, N, t, setToInclude, broadcast, receive, send):
         while True:
             sender, (tag, m) = receive()
             if tag == 'B':
-                CBChannel.put((sender, m))
+                greenletPacker(Greenlet(CBChannel.put, (sender, m)),
+                               'includeTransaction.CBChannel.put',
+                               (pid, N, t, setToInclude, broadcast, receive)).start()
             elif tag == 'A':
-                ACSChannel.put((sender, m))
+                greenletPacker(Greenlet(ACSChannel.put,
+                                        (sender, m)
+                                        ), 'includeTransaction.ACSChannel.put',
+                               (pid, N, t, setToInclude, broadcast, receive)).start()
 
     outputChannel = [Queue(1) for _ in range(N)]
 
@@ -353,8 +339,6 @@ def includeTransaction(pid, N, t, setToInclude, broadcast, receive, send):
                    (pid, N, t, setToInclude, broadcast, receive)).start()
 
     commonSet = locker.get()
-
-    # print("TXSet ---> ", TXSet)
     return commonSet, TXSet
 
 
@@ -365,11 +349,6 @@ import time, sys
 lock = Queue()
 finishcount = 0
 lock.put(1)
-
-cryptor = Cryptor()
-aes_key = _sgx_tx_cryptor.load_aes_key_from_file(
-    os.path.join(_SGX_DATA_DIR, "aes.key")
-)
 
 
 @greenletFunction
@@ -422,6 +401,7 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
 
         if op == "IncludeTransaction":
             if isinstance(msg, Transaction):
+                # transactionCache.add(msg)
                 transactionCache.append(msg)
             elif isinstance(msg, set):
                 for tx in msg:
@@ -431,74 +411,77 @@ def honestParty(pid, N, t, controlChannel, broadcast, receive, send, B=-1):
         elif op == "Halt":
             break
         elif op == "Msg":
-            broadcast(eval(msg))
+            broadcast(eval(msg))  # now the msg is something we mannually send
 
         mylog("timestampB (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
 
-        if len(transactionCache) < B:
+        if len(transactionCache) < B:  # Let's wait for many transactions. : )
             time.sleep(0.5)
             print("Not enough transactions", len(transactionCache))
+
             continue
 
-        # 随机提案
         oldest_B = transactionCache[:B]
         selected_B = random.sample(oldest_B, int(min(B / N, len(oldest_B))))
+        aesKey = random._urandom(32)  #
 
-        # RSA 加密
-        encrypted_B = cryptor.encrypt_aes(b''.join(selected_B), aes_key)
-        encryptedAESKey = cryptor.encrypt_rsa(aes_key)
-        proposal = encryptedAESKey + encrypted_B
+        label = "1"
+        encrypted_B = encrypt(aesKey, b''.join(selected_B))
+        encryptedAESKey = encPK.encrypt(aesKey, label)
+        proposal = serializeEnc(encryptedAESKey).encode("ISO-8859-1") + encrypted_B
 
-        # 门限加密
-        # encrypted_B = encrypt(aesKey, b''.join(selected_B))
-        # encryptedAESKey = encPK.encrypt(aesKey, label)
-        # proposal = serializeEnc(encryptedAESKey).encode("ISO-8859-1") + encrypted_B
-
-        # print("aes_key ---> ", aes_key)
-        # print("encrypted_B ---> ", encrypted_B)
-        # print("encryptedAESKey ---> ", encryptedAESKey)
-        # print("proposal ---> ", proposal)
-        # print("len(proposal) ---> ", len(proposal))
-        # print("len(encrypted_B) ---> ", len(encrypted_B))
-
-        # mylog("timestampIB (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
+        # print(len(proposal.decode("ISO-8859-1")))
+        mylog("timestampIB (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
 
         tb1 = time.time()  # beginning of the protocol
 
-        commonSet, proposals = includeTransaction(pid, N, t, proposal, broadcast, includeTransactionChannel.get, send)
-        # print("proposals ---> ", proposals)
-        # mylog("timestampIE (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
-        receivedProposals = True
 
-        ### todo: None-SGX
-        # for i in range(N):
-        #     probe(i)
-        # mylog("timestampIE2 (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
+        commonSet, proposals = includeTransaction(pid, N, t, proposal, broadcast, includeTransactionChannel.get, send)
+        mylog("timestampIE (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
+        receivedProposals = True
+        for i in range(N):
+            probe(i)
+        for i, c in enumerate(commonSet):  # stx is the same for every party
+            if c:
+                one, two, three, four, five, six = deserializeEnc(proposals[i][:ENC_SERIALIZED_LENGTH])
+                '''print(one)
+                    print(two)
+                    print(three)
+                    print(four)
+                    print(five)
+                    print(six)'''
+                # share = encSKs[pid].decrypt_share(deserializeEnc(proposals[i][:ENC_SERIALIZED_LENGTH]))
+                share = encSKs[pid].decrypt_share(one, two, three, four, five, six)
+                broadcast(('O', i, share))
+
+        mylog("timestampIE2 (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
         recoveredSyncedTxList = []
 
-        def prepareTx(i, c):
-            if c != 1:
-                recoveredSyncedTx = []
-            else:
-                aesKeyFromEncrypted = _sgx_tx_cryptor.decrypt_rsa(proposals[i][:256])
-                encodedTxSet = _sgx_tx_cryptor.decrypt_aes(proposals[i][256:].rstrip(b'\x01'), aesKeyFromEncrypted)
-                assert len(encodedTxSet) % _TR_SIZE == 0
-                recoveredSyncedTx = [encodedTxSet[j:j + _TR_SIZE] for j in range(0, len(encodedTxSet), _TR_SIZE)]
+        def prepareTx(i):
+            rec = locks[i].get()
+            encodedTxSet = decrypt(rec.encode("ISO-8859-1"),
+                                   ((proposals[i].decode("ISO-8859-1"))[ENC_SERIALIZED_LENGTH:
+                                                                        len(proposals[i]
+                                                                            .decode("ISO-8859-1")) - 1])
+                                   .encode("ISO-8859-1"))
+            assert len(encodedTxSet) % TR_SIZE == 0
+            recoveredSyncedTx = [encodedTxSet[i:i + TR_SIZE] for i in range(0, len(encodedTxSet), TR_SIZE)]
             recoveredSyncedTxList.append(recoveredSyncedTx)
+
+        tb3 = time.time()
 
         thList = []
         for i, c in enumerate(commonSet):  # stx is the same for every party
             if c:
-                s = Greenlet(prepareTx, i, c)
+                s = Greenlet(prepareTx, i)
                 thList.append(s)
                 s.start()
 
         gevent.joinall(thList)
 
-        # mylog("timestampE (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
+        mylog("timestampE (%d, %lf)" % (pid, time.time()), verboseLevel=-2)
 
         for rtx in recoveredSyncedTxList:
-            # print("rtx ----> ", rtx)
             finishedTx.update(set(rtx))
 
         mylog("[%d] %d distinct tx synced and %d tx left in the pool." % (

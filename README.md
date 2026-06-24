@@ -1,6 +1,6 @@
-# BEAT-LOCAL-COIN ( Original Python 3 Version )
+# BEAT-LOCAL-COIN ( Python 3 LocalCoin Version )
 
-> 基于 [HoneyBadgerBFT](https://github.com/amiller/HoneyBadgerBFT) 项目的改进实现
+> 基于 [HoneyBadgerBFT](https://github.com/amiller/HoneyBadgerBFT) 项目的改进实现，支持本地币（LocalCoin）模拟
 
 ## License
 
@@ -8,14 +8,15 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 
 ## 版本说明
 
-本分支 (`Beat-Origin-PY3`) 是原始的 Python 3 版本实现，包含完整的 BEAT0 协议代码和基准测试结果。
+本分支 (`Beat-Localcoin-PY3`) 是 LocalCoin 版本的 Python 3 实现，包含完整的 BEAT 协议代码、Simulator 模拟器和基准测试结果。
 
 ### 分支特点
 
-- 包含完整的 BEAT0 协议实现（`BEAT0/` 目录）
-- 包含多个基准测试结果文件
-- 支持 4 节点和 16 节点配置
+- 包含完整的 BEAT 协议实现（`BEAT0/` 和 `adaptive/` 目录）
+- 包含 Simulator 模拟器（`Simulator/` 目录）
+- 支持 4 节点和 7 节点配置
 - 提供密钥生成和验证工具
+- 包含运行脚本（`run.sh`, `run_beat7.py`, `run_beat7.sh`, `start.sh`）
 
 ## 项目结构
 
@@ -29,10 +30,16 @@ Beat-LocalCoin-SGX/
 │       ├── threshenc/        # 门限加密
 │       └── test/             # 测试脚本
 ├── adaptive/                 # 改进的自适应版本
+├── Simulator/                # 模拟器
+├── log/                      # 日志目录
 ├── benchmark_*.csv           # 基准测试结果
 ├── generate_keys.py          # 密钥生成工具
 ├── verify_keys.py            # 密钥验证工具
 ├── verify_keys_deep.py       # 深度密钥验证
+├── run.sh                    # 运行脚本
+├── run_beat7.py              # 7节点运行脚本
+├── run_beat7.sh              # 7节点Shell脚本
+├── start.sh                  # 启动脚本
 ├── LICENSE
 └── README.md
 ```
@@ -59,9 +66,9 @@ pip install gevent charm-crypto pycryptodome ecdsa
 python3 generate_keys.py 4 2
 ```
 
-#### 生成 16 节点密钥
+#### 生成 7 节点密钥
 ```bash
-python3 generate_keys.py 16 5
+python3 generate_keys.py 7 2
 ```
 
 ### 2. 验证密钥
@@ -94,7 +101,19 @@ python3 -m adaptive.test.honest_party_test \
     -n 4 -t 1 -b 100
 ```
 
-### 4. 查看基准测试结果
+### 4. 使用运行脚本
+
+#### 运行 4 节点版本
+```bash
+./start.sh 4 1 10 1
+```
+
+#### 运行 7 节点版本
+```bash
+./run_beat7.sh
+```
+
+### 5. 查看基准测试结果
 
 ```bash
 cat benchmark_all.csv
@@ -115,15 +134,6 @@ cat benchmark_none_sgx_vs_beat.csv
 | `-b` | `--propose-size` | 每轮提议的交易数量 B | `ceil(N * ln(N))` | `-b 100` |
 | `-x` | `--transactions` | 每个节点提议的总交易数 TX | 等于 B | `-x 1000` |
 
-### 分布式模式专用参数（honest_party_test_EC2）
-
-| 参数 | 长参数 | 说明 | 默认值 | 示例 |
-|------|--------|------|--------|------|
-| `-s` | `--hosts` | 服务器 IP 列表文件路径 | `~/hosts` | `-s hosts7` |
-| `-a` | `--negotiated-time` | 协议同步启动时间（Unix 时间戳） | `50` | `-a 1688888888` |
-| | `--my-id` | 当前节点的 ID（0 到 N-1） | `0` | `--my-id 3` |
-| `-p` | `--tx-path` | 交易集文件路径 | `tx` | `-p tx` |
-
 ### 参数详解
 
 #### 密钥文件参数 (`-k`, `-e`, `-c`)
@@ -140,7 +150,6 @@ cat benchmark_none_sgx_vs_beat.csv
 - **`-t t`**：系统可容忍的恶意节点数量。必须满足 `N > 3t`（拜占庭容错条件）。
   - N=4, t=1：可容忍 1 个恶意节点
   - N=7, t=2：可容忍 2 个恶意节点
-  - N=16, t=5：可容忍 5 个恶意节点
 
 #### 交易参数 (`-b`, `-x`)
 
@@ -148,12 +157,6 @@ cat benchmark_none_sgx_vs_beat.csv
   - 较小的 B（如 10-100）：快速完成，适合测试
   - 较大的 B（如 10000-100000）：更接近真实负载，测量最大吞吐量
 - **`-x TX`**：每个节点总共提议的交易数。默认等于 B，即只运行一轮。设置更大值可测试多轮共识。
-
-#### 分布式参数 (`-s`, `-a`, `--my-id`)
-
-- **`-s hosts`**：服务器 IP 列表文件，每行一个 IP 地址。节点按文件顺序分配 ID（0, 1, 2, ...）。
-- **`-a TIMESTAMP`**：协议同步启动时间。所有节点在此时间戳同时开始共识，确保公平测试。
-- **`--my-id ID`**：指定当前进程代表的节点 ID。分布式部署时，每台服务器运行相同命令但使用不同的 `--my-id`。
 
 ### 示例命令
 
@@ -167,18 +170,16 @@ python3 -m BEAT0.BEAT.test.honest_party_test \
     -n 4 -t 1 -b 100
 ```
 
-#### 分布式模式（7 节点）
+#### 使用 start.sh 脚本（4 节点）
 
 ```bash
-# 在每台服务器上运行，指定不同的 --my-id
-python3 -m BEAT0.BEAT.test.honest_party_test_EC2 \
-    -k thsig7.keys \
-    -e ecdsa7.keys \
-    -c thenc7.keys \
-    -s hosts7 \
-    -n 7 -t 2 -b 1000 \
-    -a 1688888888 \
-    --my-id 0  # 其他服务器改为 1, 2, 3, 4, 5, 6
+./start.sh 4 1 10 1
+```
+
+#### 使用 run_beat7.sh 脚本（7 节点）
+
+```bash
+./run_beat7.sh
 ```
 
 ## 致谢
