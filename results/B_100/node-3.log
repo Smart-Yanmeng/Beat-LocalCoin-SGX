@@ -1,0 +1,18 @@
+2026-05-29 01:51:11,759:[vaba_run.py:94]:[INFO]: Running ADKG ...
+2026-05-29 01:51:11,764:[vaba_run.py:56]:[INFO]: <class 'pypairing.G1'>
+2026-05-29 01:51:25,081:[vaba_run.py:79]:[INFO]: ADKG start time: 1779990685.0818877
+2026-05-29 01:51:25,082:[vaba.py:647]:[INFO]: Starting ADKG for node 3
+2026-05-29 01:51:25,082:[vaba.py:655]:[INFO]: Start avss and RBC0
+2026-05-29 01:51:25,092:[vaba.py:512]:[INFO]: Start view 0
+2026-05-29 01:51:25,097:[vaba.py:547]:[INFO]: Elect x = 2 in view 0
+2026-05-29 01:51:25,099:[vaba.py:602]:[INFO]: Agreed on 2, set: {0, 2, 3}, value_set: [b'\x00', b'\x00', b'\x00']
+2026-05-29 01:51:25,100:[vaba.py:676]:[INFO]: ADKG time:  0.01815963 ACSS time: 0.00959992, RBC1 time: 0.00309753, Other time: 0.00241804,  RBC2 time: 0.00164604, Eval time: 0.00093651, End view: 0
+2026-05-29 01:51:25,100:[vaba_run.py:88]:[INFO]: [3] Bytes Sent: R:1608 which is 19.749%
+2026-05-29 01:51:25,100:[vaba_run.py:88]:[INFO]: [3] Bytes Sent: A:2436 which is 29.919%
+2026-05-29 01:51:25,100:[vaba_run.py:88]:[INFO]: [3] Bytes Sent: [:2250 which is 27.634%
+2026-05-29 01:51:25,100:[vaba_run.py:88]:[INFO]: [3] Bytes Sent: (:102 which is 1.253%
+2026-05-29 01:51:25,100:[vaba_run.py:88]:[INFO]: [3] Bytes Sent: ):102 which is 1.253%
+2026-05-29 01:51:25,100:[vaba_run.py:88]:[INFO]: [3] Bytes Sent: E:552 which is 6.78%
+2026-05-29 01:51:25,100:[vaba_run.py:88]:[INFO]: [3] Bytes Sent: ]:918 which is 11.275%
+2026-05-29 01:51:25,100:[vaba_run.py:88]:[INFO]: [3] Bytes Sent: T:174 which is 2.137%
+2026-05-29 01:51:25,100:[vaba_run.py:89]:[INFO]: [3] Total bytes sent out aa: 8142, msg count: 132
