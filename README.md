@@ -13,7 +13,7 @@ BEAT-LOCAL-COIN 是一个基于阈值密码学的分布式共识协议实现，�
 ## 环境要求
 
 ### 基础依赖
-- Python 3.8+
+- Python 3.8
 - pip
 
 ### Python 依赖
