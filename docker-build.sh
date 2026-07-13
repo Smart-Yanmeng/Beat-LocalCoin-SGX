@@ -66,6 +66,104 @@ done
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 REPO_NAME=$(basename -s .git $(git remote get-url origin))
 
+# 生成docker-compose文件的函数
+generate_compose() {
+    local branch=$1
+    local branch_clean=$(echo "$branch" | sed 's/\//-/g')
+    local image_name="${REPO_NAME,,}:${branch_clean}"
+    local compose_file="docker-compose.${branch_clean}.yml"
+    
+    cat > "$compose_file" << EOF
+version: '3.8'
+
+services:
+  # Standalone模式服务
+  trubft-standalone:
+    image: ${image_name}
+    volumes:
+      - .:/app
+    command: >
+      python3 -m adaptive.test.honest_party_test 
+      -k thsig4_1.keys 
+      -e ecdsa.keys 
+      -b 100 
+      -n 4 
+      -t 1 
+      -c thenc4_1.keys
+
+  # Distributed模式服务（4个节点）
+  trubft-node-0:
+    image: ${image_name}
+    volumes:
+      - .:/app
+    command: >
+      python3 -m adaptive.test.honest_party_test_EC2 
+      -k thsig4_1.keys 
+      -e ecdsa.keys 
+      -b 100 
+      -n 4 
+      -t 1 
+      -c thenc4_1.keys 
+      -s hosts 
+      -v 1 
+      --my-id 0
+    depends_on:
+      - trubft-node-1
+      - trubft-node-2
+      - trubft-node-3
+
+  trubft-node-1:
+    image: ${image_name}
+    volumes:
+      - .:/app
+    command: >
+      python3 -m adaptive.test.honest_party_test_EC2 
+      -k thsig4_1.keys 
+      -e ecdsa.keys 
+      -b 100 
+      -n 4 
+      -t 1 
+      -c thenc4_1.keys 
+      -s hosts 
+      -v 1 
+      --my-id 1
+
+  trubft-node-2:
+    image: ${image_name}
+    volumes:
+      - .:/app
+    command: >
+      python3 -m adaptive.test.honest_party_test_EC2 
+      -k thsig4_1.keys 
+      -e ecdsa.keys 
+      -b 100 
+      -n 4 
+      -t 1 
+      -c thenc4_1.keys 
+      -s hosts 
+      -v 1 
+      --my-id 2
+
+  trubft-node-3:
+    image: ${image_name}
+    volumes:
+      - .:/app
+    command: >
+      python3 -m adaptive.test.honest_party_test_EC2 
+      -k thsig4_1.keys 
+      -e ecdsa.keys 
+      -b 100 
+      -n 4 
+      -t 1 
+      -c thenc4_1.keys 
+      -s hosts 
+      -v 1 
+      --my-id 3
+EOF
+    
+    echo "✓ 生成 $compose_file"
+}
+
 # 构建单个分支的函数
 build_branch() {
     local branch=$1
@@ -83,6 +181,9 @@ build_branch() {
     # 构建Docker镜像
     docker build -t "$image_name" .
     
+    # 生成docker-compose文件
+    generate_compose "$branch"
+    
     echo "✓ 镜像 $image_name 构建完成"
     echo ""
 }
@@ -91,33 +192,14 @@ build_branch() {
 run_container() {
     local branch=$1
     local branch_clean=$(echo "$branch" | sed 's/\//-/g')
-    local image_name="${REPO_NAME,,}:${branch_clean}"
+    local compose_file="docker-compose.${branch_clean}.yml"
     
     echo "运行分支 $branch 的容器..."
     
     if [ "$MODE" = "standalone" ]; then
-        docker run --rm -it "$image_name"
+        docker-compose -f "$compose_file" up trubft-standalone
     elif [ "$MODE" = "distributed" ]; then
-        echo "分布式模式需要docker-compose配置"
-        # 为分布式模式创建临时docker-compose
-        cat > docker-compose临时.yml << EOF
-version: '3.8'
-services:
-  node-0:
-    image: $image_name
-    command: python3 -m adaptive.test.honest_party_test_EC2 -k thsig4_1.keys -e ecdsa.keys -b 100 -n 4 -t 1 -c thenc4_1.keys -s hosts -v 1 --my-id 0
-  node-1:
-    image: $image_name
-    command: python3 -m adaptive.test.honest_party_test_EC2 -k thsig4_1.keys -e ecdsa.keys -b 100 -n 4 -t 1 -c thenc4_1.keys -s hosts -v 1 --my-id 1
-  node-2:
-    image: $image_name
-    command: python3 -m adaptive.test.honest_party_test_EC2 -k thsig4_1.keys -e ecdsa.keys -b 100 -n 4 -t 1 -c thenc4_1.keys -s hosts -v 1 --my-id 2
-  node-3:
-    image: $image_name
-    command: python3 -m adaptive.test.honest_party_test_EC2 -k thsig4_1.keys -e ecdsa.keys -b 100 -n 4 -t 1 -c thenc4_1.keys -s hosts -v 1 --my-id 3
-EOF
-        docker-compose -f docker-compose临时.yml up
-        rm docker-compose临时.yml
+        docker-compose -f "$compose_file" up -d
     fi
 }
 
@@ -142,7 +224,9 @@ if [ "$BUILD_ALL" = true ]; then
     if [ "$RUN_AFTER" = true ]; then
         echo "开始运行所有分支的容器..."
         for branch in $branches; do
-            run_container "$branch"
+            if git show "origin/$branch:Dockerfile" >/dev/null 2>&1; then
+                run_container "$branch"
+            fi
         done
     fi
     
@@ -174,5 +258,5 @@ echo "查看所有镜像:"
 docker images | grep "$REPO_NAME"
 echo ""
 echo "运行容器:"
-echo "  单分支: ./docker-build.sh -b <分支名> -r"
+echo "  单分支: docker-compose -f docker-compose.<分支名>.yml up trubft-standalone"
 echo "  所有分支: ./docker-build.sh -a -r"
