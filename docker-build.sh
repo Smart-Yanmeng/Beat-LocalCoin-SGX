@@ -130,7 +130,12 @@ if [ "$BUILD_ALL" = true ]; then
     branches=$(git branch -r | grep -v HEAD | sed 's/origin\///' | xargs)
     
     for branch in $branches; do
-        build_branch "$branch"
+        # 检查分支是否有Dockerfile
+        if git show "origin/$branch:Dockerfile" >/dev/null 2>&1; then
+            build_branch "$branch"
+        else
+            echo "跳过分支 $branch (无Dockerfile)"
+        fi
     done
     
     # 如果需要运行，遍历运行
