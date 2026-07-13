@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # Standalone模式服务
+  trubft-standalone:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    command: >
+      python3 -m adaptive.test.honest_party_test 
+      -k thsig4_1.keys 
+      -e ecdsa.keys 
+      -b 100 
+      -n 4 
+      -t 1 
+      -c thenc4_1.keys
+
+  # Distributed模式服务（4个节点）
+  trubft-node-0:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    command: >
+      python3 -m adaptive.test.honest_party_test_EC2 
+      -k thsig4_1.keys 
+      -e ecdsa.keys 
+      -b 100 
+      -n 4 
+      -t 1 
+      -c thenc4_1.keys 
+      -s hosts 
+      -v 1 
+      --my-id 0
+    depends_on:
+      - trubft-node-1
+      - trubft-node-2
+      - trubft-node-3
+
+  trubft-node-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    command: >
+      python3 -m adaptive.test.honest_party_test_EC2 
+      -k thsig4_1.keys 
+      -e ecdsa.keys 
+      -b 100 
+      -n 4 
+      -t 1 
+      -c thenc4_1.keys 
+      -s hosts 
+      -v 1 
+      --my-id 1
+
+  trubft-node-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    command: >
+      python3 -m adaptive.test.honest_party_test_EC2 
+      -k thsig4_1.keys 
+      -e ecdsa.keys 
+      -b 100 
+      -n 4 
+      -t 1 
+      -c thenc4_1.keys 
+      -s hosts 
+      -v 1 
+      --my-id 2
+
+  trubft-node-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    command: >
+      python3 -m adaptive.test.honest_party_test_EC2 
+      -k thsig4_1.keys 
+      -e ecdsa.keys 
+      -b 100 
+      -n 4 
+      -t 1 
+      -c thenc4_1.keys 
+      -s hosts 
+      -v 1 
+      --my-id 3

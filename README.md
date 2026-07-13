@@ -103,10 +103,50 @@ python3 -m adaptive.test.honest_party_test_EC2 \
 | `--my-id` | 当前节点 ID（分布式模式） | `--my-id 0` |
 | `-s` | 主机列表文件（分布式模式） | `-s hosts` |
 
+## Docker 容器测试
+
+### 环境要求
+- Docker Desktop (Windows/Mac) 或 Docker Engine (Linux)
+- Docker Compose
+
+### 快速开始
+
+#### 为所有分支构建Docker镜像
+```bash
+./docker-build.sh -a
+```
+
+#### 为指定分支构建并运行
+```bash
+./docker-build.sh -b TruBFT -r
+./docker-build.sh -b ACS -r
+```
+
+#### 查看所有分支的镜像状态
+```bash
+./docker-list.sh
+```
+
+### 分支镜像命名规则
+- 镜像格式: `trubft:<分支名>`
+- 示例: `trubft:TruBFT`, `trubft:ACS`, `trubft:Beat-PY3`
+
+### 运行模式
+
+#### Standalone模式（单节点测试）
+```bash
+./docker-build.sh -b TruBFT -m standalone -r
+```
+
+#### Distributed模式（多节点测试）
+```bash
+./docker-build.sh -b TruBFT -m distributed -r
+```
+
 ## 项目结构
 
 ```
-Beat-LocalCoin-SGX/
+TruBFT/
 ├── adaptive/
 │   ├── commoncoin/     # 阈值签名和公共硬币协议
 │   ├── core/           # 核心共识协议实现
@@ -114,6 +154,11 @@ Beat-LocalCoin-SGX/
 │   ├── sgx/            # SGX 相关代码（可选）
 │   ├── test/           # 测试脚本
 │   └── threshenc/      # 阈值加密模块
+├── Dockerfile          # Docker容器配置
+├── docker-compose.yml  # Docker Compose配置
+├── docker-build.sh     # 分支管理脚本
+├── docker-list.sh      # 查看镜像状态
+├── hosts               # 分布式模式节点配置
 ├── LICENSE
 └── README.md
 ```
