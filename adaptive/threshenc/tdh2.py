@@ -34,6 +34,14 @@ def serialize(g):
     # return decodestring(group.serialize(g)[2:])
 
 
+def serialize0(g):
+    # Inverse of deserialize0: strip '0:' prefix and decode
+    s = group.serialize(g)
+    if s.startswith(b'0:'):
+        s = s[2:]
+    return decodestring(s)
+
+
 def serialize1(g):
     return group.serialize(g)
     # return decodestring(group.serialize(g))
@@ -212,6 +220,15 @@ def dealer(players=10, k=5):
     return public_key, private_keys
 
 
+def gen_keys(players, threshold):
+    """Generate threshold encryption keys and serialize to stdout."""
+    pk, sks = dealer(players=players, k=threshold)
+    import pickle, sys
+    data = (pk.l, pk.k, serialize1(pk.VK), [serialize1(v) for v in pk.VKs],
+            [(sk.i, serialize0(sk.SK)) for sk in sks])
+    pickle.dump(data, sys.stdout.buffer)
+
+
 BS = 16
 pad = lambda s: s + (BS - len(s) % BS) * chr(BS - len(s) % BS)
 unpad = lambda s: s[:-ord(s[len(s) - 1:])]
@@ -232,3 +249,13 @@ def decrypt(key, enc):
     iv = enc[:16]
     cipher = AES.new(key, AES.MODE_CBC, iv)
     return unpad(cipher.decrypt(enc[16:]))
+
+
+if __name__ == '__main__':
+    import sys
+    if len(sys.argv) >= 3:
+        players = int(sys.argv[1])
+        threshold = int(sys.argv[2])
+        gen_keys(players, threshold)
+    else:
+        print("Usage: python -m adaptive.threshenc.tdh2 <players> <threshold>", file=sys.stderr)

@@ -169,7 +169,7 @@ def test():
         sigs[SK.i], proof_c[SK.i], proof_z[SK.i] = SK.sign(g_1, gg)
         assert PK.verify_share(gg, sigs[SK.i], g_1, i, proof_c[SK.i], proof_z[SK.i])
 
-    SS = range(PK.l)
+    SS = list(range(PK.l))
     for i in range(64 * 4):
         random.shuffle(SS)
         S = set(SS[:PK.k])
@@ -181,8 +181,23 @@ def test():
     print("done")
 
 
+def gen_keys(players, threshold):
+    """Generate threshold signature keys and serialize to stdout."""
+    pk, sks, g = dealer(players=players, k=threshold)
+    import pickle, sys
+    data = (pk.l, pk.k, serialize1(pk.VK), [serialize1(v) for v in pk.VKs],
+            [(sk.i, serialize1(sk.SK)) for sk in sks], serialize1(g))
+    pickle.dump(data, sys.stdout.buffer)
+
+
 def main():
-    test()
+    import sys
+    if len(sys.argv) >= 3:
+        players = int(sys.argv[1])
+        threshold = int(sys.argv[2])
+        gen_keys(players, threshold)
+    else:
+        test()
 
 
 if __name__ == '__main__':

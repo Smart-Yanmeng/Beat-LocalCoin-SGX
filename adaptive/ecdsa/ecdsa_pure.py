@@ -1,10 +1,22 @@
 """Pure Python ECDSA wrapper using the 'ecdsa' package, compatible with OpenSSL 3.x."""
 import hashlib
-import ecdsa
+import sys
+import importlib
+
+# Temporarily remove adaptive paths to import the pip ecdsa package
+_original_path = sys.path[:]
+sys.path = [p for p in sys.path if '/adaptive' not in p]
+try:
+    # Force reimport of ecdsa from the pip package
+    if 'ecdsa' in sys.modules:
+        del sys.modules['ecdsa']
+    import ecdsa as _ecdsa
+finally:
+    sys.path = _original_path
 
 
 class KEY:
-    SECP256K1 = ecdsa.SECP256k1
+    SECP256K1 = _ecdsa.SECP256k1
 
     def __init__(self):
         self._sk = None
@@ -13,7 +25,7 @@ class KEY:
 
     def generate(self, secret=None):
         if secret is None:
-            self._sk = ecdsa.SigningKey.generate(curve=ecdsa.SECP256k1)
+            self._sk = _ecdsa.SigningKey.generate(curve=_ecdsa.SECP256k1)
         else:
             if isinstance(secret, str):
                 secret = secret.encode()
@@ -22,7 +34,7 @@ class KEY:
                 secret = secret.ljust(32, b'\x00')
             elif len(secret) > 32:
                 secret = secret[:32]
-            self._sk = ecdsa.SigningKey.from_string(secret, curve=ecdsa.SECP256k1)
+            self._sk = _ecdsa.SigningKey.from_string(secret, curve=_ecdsa.SECP256k1)
         self._vk = self._sk.get_verifying_key()
 
     def set_compressed(self, compressed):
@@ -46,7 +58,7 @@ class KEY:
             hash_val = hash_val.ljust(32, b'\x00')
         elif len(hash_val) > 32:
             hash_val = hashlib.sha256(hash_val).digest()
-        sig = self._sk.sign_digest(hash_val, sigencode=ecdsa.util.sigencode_string)
+        sig = self._sk.sign_digest(hash_val, sigencode=_ecdsa.util.sigencode_string)
         return sig
 
     def verify(self, hash_val, sig):
@@ -59,5 +71,5 @@ class KEY:
             elif len(hash_val) > 32:
                 hash_val = hashlib.sha256(hash_val).digest()
             return self._vk.verify_digest(sig, hash_val)
-        except ecdsa.BadSignatureError:
+        except _ecdsa.BadSignatureError:
             return False
