@@ -7,19 +7,19 @@ RUN echo "deb http://mirrors.aliyun.com/debian/ bullseye main" > /etc/apt/source
     echo "deb http://mirrors.aliyun.com/debian-security bullseye-security main" >> /etc/apt/sources.list && \
     echo "deb http://mirrors.aliyun.com/debian/ bullseye-updates main" >> /etc/apt/sources.list
 
-# Install TruBFT dependencies + build tools for charm
+# Install build tools for charm
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget bison cmake flex libflint-dev libmpfr-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PBC library
+# Install PBC library (skip if fails)
 RUN wget -q https://crypto.stanford.edu/pbc/files/pbc-0.5.14.tar.gz -O /tmp/pbc.tar.gz && \
     cd /tmp && tar xzf pbc.tar.gz && \
     cd pbc-0.5.14 && ./configure && make -j$(nproc) && make install && \
     ldconfig && \
-    rm -rf /tmp/pbc*
+    rm -rf /tmp/pbc* || echo "PBC install failed, continuing..."
 
-# Build charm from source (fix multiple definition error with newer GCC)
+# Build charm from source
 RUN git clone https://github.com/JHUISI/charm.git /tmp/charm && \
     cd /tmp/charm && \
     git reset --hard be9587ccdd4d61c591fb50728ebf2a4690a2064f && \
@@ -30,12 +30,12 @@ RUN git clone https://github.com/JHUISI/charm.git /tmp/charm && \
     make install && \
     rm -rf /tmp/charm
 
-# Cleanup build tools
+# Cleanup
 RUN apt-get purge -y wget bison cmake flex && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies with pip mirror
+# Install Python dependencies
 RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && \
     pip config set install.trusted-host mirrors.aliyun.com && \
     pip uninstall -y pycrypto pycryptodome && \
