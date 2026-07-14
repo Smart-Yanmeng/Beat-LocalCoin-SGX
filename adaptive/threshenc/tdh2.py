@@ -1,7 +1,7 @@
 from charm.core.engine.protocol import *
 from charm.toolbox.ecgroup import ECGroup, ZR, G
 from charm.toolbox.eccurve import prime256v1
-from base64 import encodestring, decodestring
+from base64 import encodebytes as encodestring, decodebytes as decodestring
 import random
 from Crypto.Hash import SHA256
 import time
@@ -32,6 +32,14 @@ ONE = group.init(ZR, 1)
 def serialize(g):
     return decodestring(group.serialize(g)[2:])
     # return decodestring(group.serialize(g)[2:])
+
+
+def serialize0(g):
+    # Inverse of deserialize0: strip '0:' prefix and decode
+    s = group.serialize(g)
+    if s.startswith(b'0:'):
+        s = s[2:]
+    return decodestring(s)
 
 
 def serialize1(g):
@@ -117,21 +125,8 @@ class TDHPublicKey(object):
         e = hashH(c, L, u, w, u1, w1)
         f = s + r * e
         C = (c, L, u, u1, e, f)
+        print("---> C >>>>>>> ENCRYPTED")
         return C
-    # def encrypt(self, m, L):
-    #     # Only encrypt 32 byte strings
-    #     #assert len(m) == 32
-    #     r = group.random()
-    #     s = group.random()
-    #     c  = xor(m, hashG(self.VK**r))
-    #     u = g ** r
-    #     w = g ** s
-    #     u1 = g1 ** r
-    #     w1 = g1 **s
-    #     e = hashH(c,L,u,w,u1,w1)
-    #     f = s + r*e
-    #     C = (c, L, u, u1, e, f)
-    #     return C
 
     def verify_ciphertext(self, cipher):
         # Check correctness of ciphertext
@@ -163,7 +158,9 @@ class TDHPublicKey(object):
                       for j, share in shares.items()])
         # print(type(hashG(res)))
         # print(type(c))
-        return xor(hashG(res).decode("ISO-8859-1"), c)
+        m = xor(hashG(res).decode("ISO-8859-1"), c)
+        # print("---> m >>>>>>> COMBINED")
+        return m
 
 
 class TDHPrivateKey(TDHPublicKey):
@@ -181,6 +178,7 @@ class TDHPrivateKey(TDHPublicKey):
         e_i = hash4(u_i, u1_i, h1_i)
         f_i = si + self.SK * e_i
         S = (u_i, e_i, f_i)
+        # print("---> S >>>>>>> DECRYPTED")
         return S
 
 
@@ -222,33 +220,13 @@ def dealer(players=10, k=5):
     return public_key, private_keys
 
 
-def test():
-    global PK, SKs
-    PK, SKs = dealer(players=31, k=11)
-
-    m = SHA256.new('message').digest()
-    L = SHA256.new('label').digest()
-    C = PK.encrypt(m, L)
-
-    uu = C[2]
-
-    t1 = time.time()
-    assert PK.verify_ciphertext(C)
-
-    shares = [sk.decrypt_share(C) for sk in SKs]
-    for i, share in enumerate(shares):
-        assert PK.verify_share(i, share, C)
-
-    SS = range(PK.l)
-    for i in range(1):
-        random.shuffle(SS)
-        S = set(SS[:PK.k])
-        m_ = PK.combine_shares(C, dict((s, shares[s]) for s in S))
-        assert m_ == m
-
-    t2 = time.time()
-    print("time: %f" % (t2 - t1))
-    print("done.")
+def gen_keys(players, threshold):
+    """Generate threshold encryption keys and serialize to stdout."""
+    pk, sks = dealer(players=players, k=threshold)
+    import pickle, sys
+    data = (pk.l, pk.k, serialize1(pk.VK), [serialize1(v) for v in pk.VKs],
+            [(sk.i, serialize0(sk.SK)) for sk in sks])
+    pickle.dump(data, sys.stdout.buffer)
 
 
 BS = 16
@@ -256,6 +234,7 @@ pad = lambda s: s + (BS - len(s) % BS) * chr(BS - len(s) % BS)
 unpad = lambda s: s[:-ord(s[len(s) - 1:])]
 
 
+# todo: put it into SGX
 def encrypt(key, raw):
     assert len(key) == 32
     raw = pad(raw.decode("ISO-8859-1"))  # bytes to string
@@ -272,9 +251,11 @@ def decrypt(key, enc):
     return unpad(cipher.decrypt(enc[16:]))
 
 
-def main():
-    test()
-
-
 if __name__ == '__main__':
-    main()
+    import sys
+    if len(sys.argv) >= 3:
+        players = int(sys.argv[1])
+        threshold = int(sys.argv[2])
+        gen_keys(players, threshold)
+    else:
+        print("Usage: python -m adaptive.threshenc.tdh2 <players> <threshold>", file=sys.stderr)

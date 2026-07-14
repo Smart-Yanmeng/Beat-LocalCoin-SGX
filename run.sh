@@ -1,34 +1,67 @@
 #!/bin/bash
 
-python3 -m adaptive.commoncoin.prf_generate_keys 4 2 > thsig4_1.keys
-python3 -m adaptive.ecdsa.generate_keys_ecdsa 4 > ecdsa1.keys
-python3 -m adaptive.threshenc.generate_keys 4 2 > thenc4_1.keys
+# TruBFT Docker 运行脚本 - 所有操作在容器内完成
 
-python3 -m adaptive.commoncoin.prf_generate_keys 7 3 thsig7_2.keys
-python3 -m adaptive.ecdsa.generate_keys_ecdsa 7 ecdsa2.keys
-python3 -m adaptive.threshenc.generate_keys 7 3 thenc7_2.keys
+MODE=${1:-help}
 
-python -m adaptive.commoncoin.prf_generate_keys 16 6 > thsig16_5.keys
-python -m adaptive.ecdsa.generate_keys_ecdsa 16 > ecdsa5.keys
-python -m adaptive.threshenc.generate_keys 16 6 > thenc16_5.keys
+show_help() {
+    echo "=========================================="
+    echo "TruBFT Docker 运行"
+    echo "=========================================="
+    echo ""
+    echo "用法: ./run.sh [模式]"
+    echo ""
+    echo "模式:"
+    echo "  build         - 构建镜像"
+    echo "  standalone    - 单节点测试"
+    echo "  distributed   - 分布式模式"
+    echo "  all           - 启动所有4个节点"
+    echo "  stop          - 停止所有容器"
+    echo "  status        - 查看容器状态"
+    echo "  shell         - 进入容器shell"
+    echo "  help          - 显示此帮助"
+    echo ""
+    echo "环境变量（可选）:"
+    echo "  TRUBFT_N      - 节点数（默认: 4）"
+    echo "  TRUBFT_T      - 容错数（默认: 1）"
+    echo "  TRUBFT_B      - 每轮交易数（默认: 100）"
+    echo ""
+    echo "示例:"
+    echo "  ./run.sh build                         # 构建镜像"
+    echo "  ./run.sh standalone                    # 默认4节点测试"
+    echo "  TRUBFT_N=6 TRUBFT_T=2 ./run.sh standalone  # 6节点测试"
+    echo "  ./run.sh shell                         # 进入容器"
+    echo ""
+    echo "注意: 密钥在容器内自动生成，无需本地环境"
+    echo ""
+}
 
-python -m adaptive.commoncoin.prf_generate_keys 31 11 > thsig31_10.keys
-python -m adaptive.ecdsa.generate_keys_ecdsa 31 > ecdsa10.keys
-python -m adaptive.threshenc.generate_keys 31 11 > thenc31_10.keys
-
-python -m adaptive.commoncoin.prf_generate_keys 46 16 > thsig46_15.keys
-python -m adaptive.ecdsa.generate_keys_ecdsa 46 > ecdsa15.keys
-python -m adaptive.threshenc.generate_keys 46 16 > thenc46_15.keys
-
-python -m adaptive.commoncoin.prf_generate_keys 61 21 > thsig61_20.keys
-python -m adaptive.ecdsa.generate_keys_ecdsa 61 > ecdsa20.keys
-python -m adaptive.threshenc.generate_keys 61 21 > thenc61_20.keys
-
-python -m adaptive.commoncoin.prf_generate_keys 91 31 > thsig91_30.keys
-python -m adaptive.ecdsa.generate_keys_ecdsa 91 > ecdsa30.keys
-python -m adaptive.threshenc.generate_keys 91 31 > thenc91_30.keys
-
-python -m adaptive.commoncoin.prf_generate_keys 121 41 > thsig121_40.keys
-python -m adaptive.ecdsa.generate_keys_ecdsa 121 > ecdsa40.keys
-python -m adaptive.threshenc.generate_keys 121 41 > thenc121_40.keys
-
+case "$MODE" in
+    build)
+        echo "构建镜像..."
+        docker build -t trubft:TruBFT .
+        echo "构建完成！"
+        ;;
+    standalone)
+        docker-compose run --rm trubft-standalone
+        ;;
+    distributed)
+        docker-compose run --rm trubft-node
+        ;;
+    all)
+        docker-compose up -d
+        docker-compose ps
+        ;;
+    stop)
+        docker-compose down
+        ;;
+    status)
+        docker-compose ps
+        ;;
+    shell)
+        docker-compose run --rm --entrypoint bash trubft-standalone
+        ;;
+    help|--help|-h|*)
+        show_help
+        ;;
+esac
