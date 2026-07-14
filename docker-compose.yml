@@ -1,93 +1,33 @@
-version: '3.8'
+#version: '3.4'
 
 services:
-  # ============================================
-  # 参数配置区 - 修改这里的值来调整参数
-  # ============================================
-  trubft-standalone:
-    image: trubft:TruBFT
+  vaba:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    cap_add:
+      - NET_ADMIN
     volumes:
-      - .:/app
-    working_dir: /app
-    environment:
-      - TRUBFT_MODE=standalone
-      - TRUBFT_N=4          # 节点数（目前只支持4）
-      - TRUBFT_T=1          # 容错数（目前只支持1）
-      - TRUBFT_B=100        # 每轮交易数
-      - TRUBFT_TX=-1        # 总交易数（-1表示使用B的值）
-
-  # 分布式模式（单节点）
-  trubft-node:
-    image: trubft:TruBFT
-    volumes:
-      - .:/app
-    working_dir: /app
-    environment:
-      - TRUBFT_MODE=distributed
-      - TRUBFT_N=4
-      - TRUBFT_T=1
-      - TRUBFT_B=100
-      - TRUBFT_TX=-1
-      - TRUBFT_MY_ID=0
-      - TRUBFT_VERSION=1
-
-  # 分布式模式（4节点）
-  trubft-node-0:
-    image: trubft:TruBFT
-    volumes:
-      - .:/app
-    working_dir: /app
-    environment:
-      - TRUBFT_MODE=distributed
-      - TRUBFT_N=4
-      - TRUBFT_T=1
-      - TRUBFT_B=100
-      - TRUBFT_TX=-1
-      - TRUBFT_MY_ID=0
-      - TRUBFT_VERSION=1
-    depends_on:
-      - trubft-node-1
-      - trubft-node-2
-      - trubft-node-3
-
-  trubft-node-1:
-    image: trubft:TruBFT
-    volumes:
-      - .:/app
-    working_dir: /app
-    environment:
-      - TRUBFT_MODE=distributed
-      - TRUBFT_N=4
-      - TRUBFT_T=1
-      - TRUBFT_B=100
-      - TRUBFT_TX=-1
-      - TRUBFT_MY_ID=1
-      - TRUBFT_VERSION=1
-
-  trubft-node-2:
-    image: trubft:TruBFT
-    volumes:
-      - .:/app
-    working_dir: /app
-    environment:
-      - TRUBFT_MODE=distributed
-      - TRUBFT_N=4
-      - TRUBFT_T=1
-      - TRUBFT_B=100
-      - TRUBFT_TX=-1
-      - TRUBFT_MY_ID=2
-      - TRUBFT_VERSION=1
-
-  trubft-node-3:
-    image: trubft:TruBFT
-    volumes:
-      - .:/app
-    working_dir: /app
-    environment:
-      - TRUBFT_MODE=distributed
-      - TRUBFT_N=4
-      - TRUBFT_T=1
-      - TRUBFT_B=100
-      - TRUBFT_TX=-1
-      - TRUBFT_MY_ID=3
-      - TRUBFT_VERSION=1
+      - ./progs:/usr/src/adkg/progs
+      - ./benchmark:/usr/src/adkg/benchmark
+      - ./.benchmarks:/usr/src/adkg/.benchmarks
+      - ./aws:/usr/src/adkg/aws
+      - ./conf:/usr/src/adkg/conf
+      - ./logs:/usr/src/adkg/logs
+      - ./docs:/usr/src/adkg/docs
+      - ./adkg:/usr/src/adkg/adkg
+      - ./scripts:/usr/src/adkg/scripts
+      - ./tests:/usr/src/adkg/tests
+      - ./.coveragerc:/usr/src/adkg/.coveragerc
+      - ./.flake8:/usr/src/adkg/.flake8
+      - ./Makefile:/usr/src/adkg/Makefile
+      - ./pytest.ini:/usr/src/adkg/pytest.ini
+      - ./setup.py:/usr/src/adkg/setup.py
+      - ./pairing/pypairing/__init__.py:/usr/src/adkg/pairing/pypairing/__init__.py
+      - ./pairing/src:/usr/src/adkg/pairing/src
+      - ./pairing/benches:/usr/src/adkg/pairing/benches
+      - ./pairing/Cargo.toml:/usr/src/adkg/pairing/Cargo.toml
+      - ./pairing/setup.py:/usr/src/adkg/pairing/setup.py
+      - ./:/usr/src/adkg/
+      - /usr/src/adkg/adkg/ntl  # Directory _not_ mounted from host
+    command: pytest -v --cov=adkg
