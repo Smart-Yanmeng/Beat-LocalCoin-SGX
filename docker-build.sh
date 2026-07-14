@@ -11,13 +11,20 @@ show_help() {
     echo "  -b, --branch <分支名>    指定单个分支构建"
     echo "  -a, --all                为所有远程分支构建镜像"
     echo "  -m, --mode <模式>        测试模式: standalone 或 distributed"
-    echo "  -n, --nodes <节点数>     节点数量（distributed模式）"
+    echo "  -n, --nodes <节点数>     节点数量（默认: 4）"
+    echo "  -t, --tolerance <T>      容错阈值（默认: 1）"
+    echo "  -s, --batch <B>          每轮提议交易数（默认: 100）"
+    echo "  -x, --transactions <TX>  每节点提交交易数（默认: -1，使用B的值）"
+    echo "  -v, --version <V>        共识版本（分布式模式，默认: 1）"
+    echo "  -k, --keys <file>        阈值签名密钥文件（默认: thsig4_1.keys）"
+    echo "  -e, --ecdsa <file>       ECDSA密钥文件（默认: ecdsa.keys）"
+    echo "  -c, --enc <file>         阈值加密密钥文件（默认: thenc4_1.keys）"
     echo "  -r, --run                构建后运行容器"
     echo "  -h, --help               显示帮助信息"
     echo "示例:"
-    echo "  $0 -b feature-x -m standalone"
+    echo "  $0 -b feature-x -m standalone -n 6 -t 2"
     echo "  $0 -a                    # 为所有分支构建镜像"
-    echo "  $0 -a -r                 # 为所有分支构建并运行"
+    echo "  $0 -a -r -n 8 -t 2      # 构建所有分支并以8节点运行"
 }
 
 # 默认值
@@ -25,6 +32,13 @@ BRANCH=""
 BUILD_ALL=false
 MODE="standalone"
 NODES=4
+TOLERANCE=1
+BATCH_SIZE=100
+TX_COUNT=-1
+VERSION=1
+KEYS_FILE="thsig4_1.keys"
+ECDSA_FILE="ecdsa.keys"
+ENC_FILE="thenc4_1.keys"
 RUN_AFTER=false
 
 # 解析命令行参数
@@ -44,6 +58,34 @@ while [[ $# -gt 0 ]]; do
             ;;
         -n|--nodes)
             NODES="$2"
+            shift 2
+            ;;
+        -t|--tolerance)
+            TOLERANCE="$2"
+            shift 2
+            ;;
+        -s|--batch)
+            BATCH_SIZE="$2"
+            shift 2
+            ;;
+        -x|--transactions)
+            TX_COUNT="$2"
+            shift 2
+            ;;
+        -v|--version)
+            VERSION="$2"
+            shift 2
+            ;;
+        -k|--keys)
+            KEYS_FILE="$2"
+            shift 2
+            ;;
+        -e|--ecdsa)
+            ECDSA_FILE="$2"
+            shift 2
+            ;;
+        -c|--enc)
+            ENC_FILE="$2"
             shift 2
             ;;
         -r|--run)
@@ -82,31 +124,50 @@ services:
     image: ${image_name}
     volumes:
       - .:/app
-    command: >
-      python3 -m adaptive.test.honest_party_test 
-      -k thsig4_1.keys 
-      -e ecdsa.keys 
-      -b 100 
-      -n 4 
-      -t 1 
-      -c thenc4_1.keys
+    environment:
+      - TRUBFT_MODE=standalone
+      - TRUBFT_N=\${TRUBFT_N:-4}
+      - TRUBFT_T=\${TRUBFT_T:-1}
+      - TRUBFT_B=\${TRUBFT_B:-100}
+      - TRUBFT_TX=\${TRUBFT_TX:--1}
+      - TRUBFT_KEYS=\${TRUBFT_KEYS:-thsig4_1.keys}
+      - TRUBFT_ECDSA=\${TRUBFT_ECDSA:-ecdsa.keys}
+      - TRUBFT_ENC=\${TRUBFT_ENC:-thenc4_1.keys}
 
-  # Distributed模式服务（4个节点）
+  # Distributed模式服务（动态节点）
+  trubft-node:
+    image: ${image_name}
+    volumes:
+      - .:/app
+    environment:
+      - TRUBFT_MODE=distributed
+      - TRUBFT_N=\${TRUBFT_N:-4}
+      - TRUBFT_T=\${TRUBFT_T:-1}
+      - TRUBFT_B=\${TRUBFT_B:-100}
+      - TRUBFT_TX=\${TRUBFT_TX:--1}
+      - TRUBFT_KEYS=\${TRUBFT_KEYS:-thsig4_1.keys}
+      - TRUBFT_ECDSA=\${TRUBFT_ECDSA:-ecdsa.keys}
+      - TRUBFT_ENC=\${TRUBFT_ENC:-thenc4_1.keys}
+      - TRUBFT_MY_ID=\${TRUBFT_MY_ID:-0}
+      - TRUBFT_VERSION=\${TRUBFT_VERSION:-1}
+      - TRUBFT_DELAY=\${TRUBFT_DELAY:-50}
+
+  # 预定义4节点配置
   trubft-node-0:
     image: ${image_name}
     volumes:
       - .:/app
-    command: >
-      python3 -m adaptive.test.honest_party_test_EC2 
-      -k thsig4_1.keys 
-      -e ecdsa.keys 
-      -b 100 
-      -n 4 
-      -t 1 
-      -c thenc4_1.keys 
-      -s hosts 
-      -v 1 
-      --my-id 0
+    environment:
+      - TRUBFT_MODE=distributed
+      - TRUBFT_N=\${TRUBFT_N:-4}
+      - TRUBFT_T=\${TRUBFT_T:-1}
+      - TRUBFT_B=\${TRUBFT_B:-100}
+      - TRUBFT_TX=\${TRUBFT_TX:--1}
+      - TRUBFT_KEYS=\${TRUBFT_KEYS:-thsig4_1.keys}
+      - TRUBFT_ECDSA=\${TRUBFT_ECDSA:-ecdsa.keys}
+      - TRUBFT_ENC=\${TRUBFT_ENC:-thenc4_1.keys}
+      - TRUBFT_MY_ID=0
+      - TRUBFT_VERSION=\${TRUBFT_VERSION:-1}
     depends_on:
       - trubft-node-1
       - trubft-node-2
@@ -116,49 +177,49 @@ services:
     image: ${image_name}
     volumes:
       - .:/app
-    command: >
-      python3 -m adaptive.test.honest_party_test_EC2 
-      -k thsig4_1.keys 
-      -e ecdsa.keys 
-      -b 100 
-      -n 4 
-      -t 1 
-      -c thenc4_1.keys 
-      -s hosts 
-      -v 1 
-      --my-id 1
+    environment:
+      - TRUBFT_MODE=distributed
+      - TRUBFT_N=\${TRUBFT_N:-4}
+      - TRUBFT_T=\${TRUBFT_T:-1}
+      - TRUBFT_B=\${TRUBFT_B:-100}
+      - TRUBFT_TX=\${TRUBFT_TX:--1}
+      - TRUBFT_KEYS=\${TRUBFT_KEYS:-thsig4_1.keys}
+      - TRUBFT_ECDSA=\${TRUBFT_ECDSA:-ecdsa.keys}
+      - TRUBFT_ENC=\${TRUBFT_ENC:-thenc4_1.keys}
+      - TRUBFT_MY_ID=1
+      - TRUBFT_VERSION=\${TRUBFT_VERSION:-1}
 
   trubft-node-2:
     image: ${image_name}
     volumes:
       - .:/app
-    command: >
-      python3 -m adaptive.test.honest_party_test_EC2 
-      -k thsig4_1.keys 
-      -e ecdsa.keys 
-      -b 100 
-      -n 4 
-      -t 1 
-      -c thenc4_1.keys 
-      -s hosts 
-      -v 1 
-      --my-id 2
+    environment:
+      - TRUBFT_MODE=distributed
+      - TRUBFT_N=\${TRUBFT_N:-4}
+      - TRUBFT_T=\${TRUBFT_T:-1}
+      - TRUBFT_B=\${TRUBFT_B:-100}
+      - TRUBFT_TX=\${TRUBFT_TX:--1}
+      - TRUBFT_KEYS=\${TRUBFT_KEYS:-thsig4_1.keys}
+      - TRUBFT_ECDSA=\${TRUBFT_ECDSA:-ecdsa.keys}
+      - TRUBFT_ENC=\${TRUBFT_ENC:-thenc4_1.keys}
+      - TRUBFT_MY_ID=2
+      - TRUBFT_VERSION=\${TRUBFT_VERSION:-1}
 
   trubft-node-3:
     image: ${image_name}
     volumes:
       - .:/app
-    command: >
-      python3 -m adaptive.test.honest_party_test_EC2 
-      -k thsig4_1.keys 
-      -e ecdsa.keys 
-      -b 100 
-      -n 4 
-      -t 1 
-      -c thenc4_1.keys 
-      -s hosts 
-      -v 1 
-      --my-id 3
+    environment:
+      - TRUBFT_MODE=distributed
+      - TRUBFT_N=\${TRUBFT_N:-4}
+      - TRUBFT_T=\${TRUBFT_T:-1}
+      - TRUBFT_B=\${TRUBFT_B:-100}
+      - TRUBFT_TX=\${TRUBFT_TX:--1}
+      - TRUBFT_KEYS=\${TRUBFT_KEYS:-thsig4_1.keys}
+      - TRUBFT_ECDSA=\${TRUBFT_ECDSA:-ecdsa.keys}
+      - TRUBFT_ENC=\${TRUBFT_ENC:-thenc4_1.keys}
+      - TRUBFT_MY_ID=3
+      - TRUBFT_VERSION=\${TRUBFT_VERSION:-1}
 EOF
     
     echo "✓ 生成 $compose_file"
@@ -195,6 +256,17 @@ run_container() {
     local compose_file="docker-compose.${branch_clean}.yml"
     
     echo "运行分支 $branch 的容器..."
+    echo "参数: N=$NODES, T=$TOLERANCE, B=$BATCH_SIZE"
+    
+    # 导出环境变量供docker-compose使用
+    export TRUBFT_N=$NODES
+    export TRUBFT_T=$TOLERANCE
+    export TRUBFT_B=$BATCH_SIZE
+    export TRUBFT_TX=$TX_COUNT
+    export TRUBFT_KEYS=$KEYS_FILE
+    export TRUBFT_ECDSA=$ECDSA_FILE
+    export TRUBFT_ENC=$ENC_FILE
+    export TRUBFT_VERSION=$VERSION
     
     if [ "$MODE" = "standalone" ]; then
         docker-compose -f "$compose_file" up trubft-standalone
@@ -260,3 +332,6 @@ echo ""
 echo "运行容器:"
 echo "  单分支: docker-compose -f docker-compose.<分支名>.yml up trubft-standalone"
 echo "  所有分支: ./docker-build.sh -a -r"
+echo ""
+echo "自定义参数运行:"
+echo "  TRUBFT_N=8 TRUBFT_T=2 ./docker-build.sh -b TruBFT -r"

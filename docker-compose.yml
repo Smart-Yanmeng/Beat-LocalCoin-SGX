@@ -1,95 +1,93 @@
 version: '3.8'
 
 services:
-  # Standalone模式服务
+  # ============================================
+  # 参数配置区 - 修改这里的值来调整参数
+  # ============================================
   trubft-standalone:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: trubft:TruBFT
     volumes:
       - .:/app
-    command: >
-      python3 -m adaptive.test.honest_party_test 
-      -k thsig4_1.keys 
-      -e ecdsa.keys 
-      -b 100 
-      -n 4 
-      -t 1 
-      -c thenc4_1.keys
+    working_dir: /app
+    environment:
+      - TRUBFT_MODE=standalone
+      - TRUBFT_N=4          # 节点数（目前只支持4）
+      - TRUBFT_T=1          # 容错数（目前只支持1）
+      - TRUBFT_B=100        # 每轮交易数
+      - TRUBFT_TX=-1        # 总交易数（-1表示使用B的值）
 
-  # Distributed模式服务（4个节点）
-  trubft-node-0:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  # 分布式模式（单节点）
+  trubft-node:
+    image: trubft:TruBFT
     volumes:
       - .:/app
-    command: >
-      python3 -m adaptive.test.honest_party_test_EC2 
-      -k thsig4_1.keys 
-      -e ecdsa.keys 
-      -b 100 
-      -n 4 
-      -t 1 
-      -c thenc4_1.keys 
-      -s hosts 
-      -v 1 
-      --my-id 0
+    working_dir: /app
+    environment:
+      - TRUBFT_MODE=distributed
+      - TRUBFT_N=4
+      - TRUBFT_T=1
+      - TRUBFT_B=100
+      - TRUBFT_TX=-1
+      - TRUBFT_MY_ID=0
+      - TRUBFT_VERSION=1
+
+  # 分布式模式（4节点）
+  trubft-node-0:
+    image: trubft:TruBFT
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      - TRUBFT_MODE=distributed
+      - TRUBFT_N=4
+      - TRUBFT_T=1
+      - TRUBFT_B=100
+      - TRUBFT_TX=-1
+      - TRUBFT_MY_ID=0
+      - TRUBFT_VERSION=1
     depends_on:
       - trubft-node-1
       - trubft-node-2
       - trubft-node-3
 
   trubft-node-1:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: trubft:TruBFT
     volumes:
       - .:/app
-    command: >
-      python3 -m adaptive.test.honest_party_test_EC2 
-      -k thsig4_1.keys 
-      -e ecdsa.keys 
-      -b 100 
-      -n 4 
-      -t 1 
-      -c thenc4_1.keys 
-      -s hosts 
-      -v 1 
-      --my-id 1
+    working_dir: /app
+    environment:
+      - TRUBFT_MODE=distributed
+      - TRUBFT_N=4
+      - TRUBFT_T=1
+      - TRUBFT_B=100
+      - TRUBFT_TX=-1
+      - TRUBFT_MY_ID=1
+      - TRUBFT_VERSION=1
 
   trubft-node-2:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: trubft:TruBFT
     volumes:
       - .:/app
-    command: >
-      python3 -m adaptive.test.honest_party_test_EC2 
-      -k thsig4_1.keys 
-      -e ecdsa.keys 
-      -b 100 
-      -n 4 
-      -t 1 
-      -c thenc4_1.keys 
-      -s hosts 
-      -v 1 
-      --my-id 2
+    working_dir: /app
+    environment:
+      - TRUBFT_MODE=distributed
+      - TRUBFT_N=4
+      - TRUBFT_T=1
+      - TRUBFT_B=100
+      - TRUBFT_TX=-1
+      - TRUBFT_MY_ID=2
+      - TRUBFT_VERSION=1
 
   trubft-node-3:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: trubft:TruBFT
     volumes:
       - .:/app
-    command: >
-      python3 -m adaptive.test.honest_party_test_EC2 
-      -k thsig4_1.keys 
-      -e ecdsa.keys 
-      -b 100 
-      -n 4 
-      -t 1 
-      -c thenc4_1.keys 
-      -s hosts 
-      -v 1 
-      --my-id 3
+    working_dir: /app
+    environment:
+      - TRUBFT_MODE=distributed
+      - TRUBFT_N=4
+      - TRUBFT_T=1
+      - TRUBFT_B=100
+      - TRUBFT_TX=-1
+      - TRUBFT_MY_ID=3
+      - TRUBFT_VERSION=1
