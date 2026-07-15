@@ -160,6 +160,7 @@ class HbmpcConfig(object):
                 for peerid, addrinfo in enumerate(config["peers"])
             }
             HbmpcConfig.time = args.time
+            HbmpcConfig.B = config.get("B", None)
 
             if "skip_preprocessing" in config:
                 HbmpcConfig.skip_preprocessing = config["skip_preprocessing"]

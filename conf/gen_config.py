@@ -4,11 +4,13 @@ import os
 n = int(sys.argv[1])
 t = int(sys.argv[2])
 k = int(sys.argv[3])
+b = int(sys.argv[4]) if len(sys.argv) > 4 else 1
 
 header = "{\n"
 header += f"\t\"N\":{n},\n"
 header += f"\t\"t\":{t},\n"
 header += f"\t\"k\":{k},\n"
+header += f"\t\"B\":{b},\n"
 
 peers = "\t\"peers\": [\n"
 for i in range(n-1):

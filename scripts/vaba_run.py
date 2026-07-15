@@ -65,7 +65,7 @@ async def _run(peers, n, t, k, my_id, start_time, ver, blscoin, blscurve):
     g, h, pks, sks = get_avss_params(n, G1, ZR)
     logging.info(type(g))
     pc = PolyCommitHybrid(g, h, ZR, multiexp)
-    deg = k
+    deg = getattr(HbmpcConfig, 'B', k) if hasattr(HbmpcConfig, 'B') and HbmpcConfig.B else k
     mat1, mat2 = gen_vector(t, deg, n, ZR)
     async with ProcessProgramRunner(peers, n, t, my_id) as runner:
         send, recv = runner.get_send_recv("")
