@@ -19,22 +19,22 @@ show_help() {
     echo "直接复制运行以下命令："
     echo ""
     echo "  # ACS/VABA (N=4, t=1, B=100)"
-    echo "  git checkout -- . && git checkout ACS && ./helper.sh acs"
+    echo "  git checkout -f ACS && ./helper.sh acs"
     echo ""
     echo "  # TruBFT SGX (N=4, t=1, B=100)"
-    echo "  git checkout -- . && git checkout TruBFT && ./helper.sh trubft"
+    echo "  git checkout -f TruBFT && ./helper.sh trubft"
     echo ""
     echo "  # TruBFT-None-SGX / Beat (N=4, t=1, B=100)"
-    echo "  git checkout -- . && git checkout TruBFT-None-SGX && ./helper.sh beat"
+    echo "  git checkout -f TruBFT-None-SGX && ./helper.sh beat"
     echo ""
     echo "  # Beat-PY3 (N=4, t=1, B=100)"
-    echo "  git checkout -- . && git checkout Beat-PY3 && ./helper.sh beat-py3"
+    echo "  git checkout -f Beat-PY3 && ./helper.sh beat-py3"
     echo ""
     echo "  # Beat-Localcoin (N=4, t=1, B=100)"
-    echo "  git checkout -- . && git checkout Beat-Localcoin-PY3 && ./helper.sh beat-localcoin"
+    echo "  git checkout -f Beat-Localcoin-PY3 && ./helper.sh beat-localcoin"
     echo ""
     echo "  # Dumbo BFT (N=4, f=1, B=1000, E=20)"
-    echo "  git checkout -- . && git checkout Dumbo\\&HB && ./helper.sh dumbo"
+    echo "  git checkout -f Dumbo\\&HB && ./helper.sh dumbo"
     echo ""
     echo "=========================================="
     echo "  自定义参数"
@@ -61,7 +61,7 @@ case "$PROTOCOL" in
     acs)
         if [ ! -f docker-compose.yml ] || ! grep -q "vaba" docker-compose.yml 2>/dev/null; then
             echo "错误: 当前分支没有 ACS 配置"
-            echo "请运行: git checkout -- . && git checkout ACS && ./helper.sh acs"
+            echo "请运行: git checkout -f ACS && ./helper.sh acs"
             exit 1
         fi
         N=${1:-4}
@@ -74,7 +74,7 @@ case "$PROTOCOL" in
     trubft)
         if [ ! -f docker-compose.yml ] || ! grep -q "trubft" docker-compose.yml 2>/dev/null; then
             echo "错误: 当前分支没有 TruBFT 配置"
-            echo "请运行: git checkout -- . && git checkout TruBFT && ./helper.sh trubft"
+            echo "请运行: git checkout -f TruBFT && ./helper.sh trubft"
             exit 1
         fi
         N=${1:-4}
@@ -87,7 +87,7 @@ case "$PROTOCOL" in
     beat)
         if [ ! -f docker-compose.yml ] || ! grep -q "beat" docker-compose.yml 2>/dev/null; then
             echo "错误: 当前分支没有 Beat 配置"
-            echo "请运行: git checkout -- . && git checkout TruBFT-None-SGX && ./helper.sh beat"
+            echo "请运行: git checkout -f TruBFT-None-SGX && ./helper.sh beat"
             exit 1
         fi
         N=${1:-4}
@@ -100,7 +100,7 @@ case "$PROTOCOL" in
     beat-py3)
         if [ ! -f docker-compose.yml ] || ! grep -q "trubft" docker-compose.yml 2>/dev/null; then
             echo "错误: 当前分支没有 Beat-PY3 配置"
-            echo "请运行: git checkout -- . && git checkout Beat-PY3 && ./helper.sh beat-py3"
+            echo "请运行: git checkout -f Beat-PY3 && ./helper.sh beat-py3"
             exit 1
         fi
         N=${1:-4}
@@ -113,7 +113,7 @@ case "$PROTOCOL" in
     beat-localcoin)
         if [ ! -f docker-compose.yml ] || ! grep -q "beat-localcoin" docker-compose.yml 2>/dev/null; then
             echo "错误: 当前分支没有 Beat-Localcoin 配置"
-            echo "请运行: git checkout -- . && git checkout Beat-Localcoin-PY3 && ./helper.sh beat-localcoin"
+            echo "请运行: git checkout -f Beat-Localcoin-PY3 && ./helper.sh beat-localcoin"
             exit 1
         fi
         N=${1:-4}
