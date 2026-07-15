@@ -1,0 +1,7 @@
+adkg.egg-info/
+adkg_4/
+build/
+benchmark-logs/
+conf/adkg_4/
+*.o
+*.so
