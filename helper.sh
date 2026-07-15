@@ -4,7 +4,7 @@
 # 用法: ./helper.sh [协议]
 #
 # 无参数: 显示所有可用命令
-# 有参数: 自动切换分支并运行
+# 有参数: 自动运行
 
 set -e
 
@@ -21,8 +21,14 @@ show_help() {
     echo "  # ACS/VABA (N=4, t=1, B=100)"
     echo "  git checkout -- . && git checkout ACS && ./helper.sh acs"
     echo ""
-    echo "  # Beat 无SGX (N=4, t=1, B=100)"
+    echo "  # TruBFT SGX (N=4, t=1, B=100)"
+    echo "  git checkout -- . && git checkout TruBFT && ./helper.sh trubft"
+    echo ""
+    echo "  # TruBFT-None-SGX / Beat (N=4, t=1, B=100)"
     echo "  git checkout -- . && git checkout TruBFT-None-SGX && ./helper.sh beat"
+    echo ""
+    echo "  # Beat-PY3 (N=4, t=1, B=100)"
+    echo "  git checkout -- . && git checkout Beat-PY3 && ./helper.sh beat-py3"
     echo ""
     echo "  # Beat-Localcoin (N=4, t=1, B=100)"
     echo "  git checkout -- . && git checkout Beat-Localcoin-PY3 && ./helper.sh beat-localcoin"
@@ -35,7 +41,9 @@ show_help() {
     echo "=========================================="
     echo ""
     echo "  ./helper.sh acs [N] [t] [B]"
+    echo "  ./helper.sh trubft [N] [t] [B]"
     echo "  ./helper.sh beat [N] [t] [B]"
+    echo "  ./helper.sh beat-py3 [N] [t] [B]"
     echo "  ./helper.sh beat-localcoin [N] [t] [B]"
     echo "  ./helper.sh dumbo [N] [f] [B] [E]"
     echo ""
@@ -63,6 +71,19 @@ case "$PROTOCOL" in
         docker build -t trubft:ACS . -q 2>/dev/null
         docker-compose run --rm vaba
         ;;
+    trubft)
+        if [ ! -f docker-compose.yml ] || ! grep -q "trubft" docker-compose.yml 2>/dev/null; then
+            echo "错误: 当前分支没有 TruBFT 配置"
+            echo "请运行: git checkout -- . && git checkout TruBFT && ./helper.sh trubft"
+            exit 1
+        fi
+        N=${1:-4}
+        T=${2:-1}
+        B=${3:-100}
+        echo "[TruBFT] N=$N, t=$T, B=$B"
+        docker build -t trubft:TruBFT . -q 2>/dev/null
+        docker-compose run --rm trubft-standalone
+        ;;
     beat)
         if [ ! -f docker-compose.yml ] || ! grep -q "beat" docker-compose.yml 2>/dev/null; then
             echo "错误: 当前分支没有 Beat 配置"
@@ -75,6 +96,19 @@ case "$PROTOCOL" in
         echo "[Beat] N=$N, t=$T, B=$B"
         docker build -t trubft:TruBFT-None-SGX . -q 2>/dev/null
         docker-compose run --rm beat
+        ;;
+    beat-py3)
+        if [ ! -f docker-compose.yml ] || ! grep -q "trubft" docker-compose.yml 2>/dev/null; then
+            echo "错误: 当前分支没有 Beat-PY3 配置"
+            echo "请运行: git checkout -- . && git checkout Beat-PY3 && ./helper.sh beat-py3"
+            exit 1
+        fi
+        N=${1:-4}
+        T=${2:-1}
+        B=${3:-100}
+        echo "[Beat-PY3] N=$N, t=$T, B=$B"
+        docker build -t trubft:Beat-PY3 . -q 2>/dev/null
+        docker-compose run --rm trubft-standalone
         ;;
     beat-localcoin)
         if [ ! -f docker-compose.yml ] || ! grep -q "beat-localcoin" docker-compose.yml 2>/dev/null; then
