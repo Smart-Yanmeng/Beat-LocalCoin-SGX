@@ -1,0 +1,38 @@
+services:
+  beat-localcoin:
+    image: trubft:Beat-Localcoin-PY3
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      - BFT_N=4
+      - BFT_T=1
+      - BFT_B=100
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        export PYTHONPATH=/app/adaptive:$PYTHONPATH
+        export LIBRARY_PATH=/usr/local/lib:$LIBRARY_PATH
+        export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+        N=$${BFT_N:-4}
+        T=$${BFT_T:-1}
+        B=$${BFT_B:-100}
+        K=$$((T + 1))
+        KEYS_FILE="thsig$${N}_1.keys"
+        ECDSA_FILE="ecdsa$${N}.keys"
+        ENC_FILE="thenc$${N}_1.keys"
+        if [ ! -f "$$KEYS_FILE" ] || [ ! -f "$$ECDSA_FILE" ] || [ ! -f "$$ENC_FILE" ]; then
+          echo "生成密钥 N=$$N, T=$$T, K=$$K ..."
+          python3 -m adaptive.commoncoin.prf_generate_keys $$N $$K > "$$KEYS_FILE"
+          python3 -m adaptive.ecdsa.generate_keys_ecdsa $$N "$$ECDSA_FILE"
+          python3 -m adaptive.threshenc.generate_keys $$N $$K > "$$ENC_FILE"
+          echo "密钥生成完成"
+        fi
+        echo "Beat-Localcoin N=$$N T=$$T B=$$B"
+        exec python3 -m adaptive.test.honest_party_test \
+          -k "$$KEYS_FILE" \
+          -e "$$ECDSA_FILE" \
+          -c "$$ENC_FILE" \
+          -n $$N \
+          -t $$T \
+          -b $$B

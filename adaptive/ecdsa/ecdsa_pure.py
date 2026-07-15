@@ -1,38 +1,27 @@
+"""Pure Python ECDSA wrapper using the 'ecdsa' package, compatible with OpenSSL 3.x."""
+import hashlib
 import sys
-import os
-
-_SYS_ECDSA_PARENT = '/usr/local/lib/python3.10/dist-packages'
-if _SYS_ECDSA_PARENT not in sys.path:
-    sys.path.insert(0, _SYS_ECDSA_PARENT)
-
-_local_ecdsa = sys.modules.pop('adaptive.ecdsa', None)
-_local_ecdsa_init = sys.modules.pop('adaptive.ecdsa.__init__', None)
-if 'ecdsa' in sys.modules:
-    del sys.modules['ecdsa']
-for k in list(sys.modules.keys()):
-    if k.startswith('ecdsa.'):
-        del sys.modules[k]
-
 import importlib
-_ecdsa = importlib.import_module('ecdsa')
-SigningKey = _ecdsa.SigningKey
-SECP256k1 = _ecdsa.SECP256k1
-BadSignatureError = _ecdsa.BadSignatureError
 
-if _local_ecdsa is not None:
-    sys.modules['adaptive.ecdsa'] = _local_ecdsa
-if _local_ecdsa_init is not None:
-    sys.modules['adaptive.ecdsa.__init__'] = _local_ecdsa_init
-sys.path.remove(_SYS_ECDSA_PARENT)
+# Temporarily remove adaptive paths to import the pip ecdsa package
+_original_path = sys.path[:]
+sys.path = [p for p in sys.path if '/adaptive' not in p]
+try:
+    # Force reimport of ecdsa from the pip package
+    if 'ecdsa' in sys.modules:
+        del sys.modules['ecdsa']
+    import ecdsa as _ecdsa
+finally:
+    sys.path = _original_path
 
 
 class KEY:
+    SECP256K1 = _ecdsa.SECP256k1
+
     def __init__(self):
-        self.POINT_CONVERSION_COMPRESSED = 2
-        self.POINT_CONVERSION_UNCOMPRESSED = 4
-        self._compressed = False
         self._sk = None
         self._vk = None
+        self._compressed = False
         self.prikey = None
 
     def __del__(self):
@@ -40,12 +29,14 @@ class KEY:
 
     def generate(self, secret=None):
         if secret:
+            if isinstance(secret, str):
+                secret = bytes.fromhex(secret)
             self.prikey = secret
-            self._sk = SigningKey.from_string(secret, curve=SECP256k1)
+            self._sk = _ecdsa.SigningKey.from_string(secret, curve=_ecdsa.SECP256k1)
             self._vk = self._sk.get_verifying_key()
             return self
         else:
-            self._sk = SigningKey.generate(curve=SECP256k1)
+            self._sk = _ecdsa.SigningKey.generate(curve=_ecdsa.SECP256k1)
             self._vk = self._sk.get_verifying_key()
             self.prikey = self._sk.to_string()
             return self
@@ -71,5 +62,5 @@ class KEY:
     def verify(self, hash_data, sig):
         try:
             return self._vk.verify_digest(sig, hash_data, sigdecode=_ecdsa.util.sigdecode_der)
-        except BadSignatureError:
+        except _ecdsa.BadSignatureError:
             return False
