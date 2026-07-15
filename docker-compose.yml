@@ -1,28 +1,22 @@
-version: '3.8'
-
 services:
-  trubft-standalone:
-    image: trubft:TruBFT
+  vaba:
+    image: trubft:ACS
     volumes:
       - .:/app
     working_dir: /app
-    environment:
-      - TRUBFT_MODE=standalone
-      - TRUBFT_N=4
-      - TRUBFT_T=1
-      - TRUBFT_B=100
-      - TRUBFT_TX=-1
-
-  trubft-node:
-    image: trubft:TruBFT
-    volumes:
-      - .:/app
-    working_dir: /app
-    environment:
-      - TRUBFT_MODE=distributed
-      - TRUBFT_N=4
-      - TRUBFT_T=1
-      - TRUBFT_B=100
-      - TRUBFT_TX=-1
-      - TRUBFT_MY_ID=0
-      - TRUBFT_VERSION=1
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        export PYTHONPATH=/app:$PYTHONPATH
+        export LIBRARY_PATH=/usr/local/lib:$LIBRARY_PATH
+        export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+        python3 conf/gen_config.py $${ACS_N:-4} $${ACS_T:-1} $$(( $${ACS_T:-1} + 1 ))
+        for i in $$(seq 0 $$(( $${ACS_N:-4} - 1 ))); do
+          python3 scripts/vaba_run.py -f conf/adkg_$${ACS_N:-4}/local.$$i.json -time 1 -d > /tmp/acs_$$i 2>&1 &
+        done
+        wait
+        echo "========== 测试结果 =========="
+        for i in $$(seq 0 $$(( $${ACS_N:-4} - 1 ))); do
+          echo "--- Node $$i ---"
+          grep -E '(ADKG time|Bytes Sent)' /tmp/acs_$$i || echo "无输出"
+        done
