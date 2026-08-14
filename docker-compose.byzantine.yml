@@ -1,11 +1,17 @@
 version: '3.8'
 
 # 拜占庭节点测试配置
-# 场景：Node 3 是拜占庭节点，完成握手后立即崩溃
-# Node 0, 1, 2 是诚实节点，应能完成共识（N=4, t=1 容忍 1 个故障）
+#
+# 场景 1: 崩溃拜占庭（默认）
+#   Node 3 = byzantine（TRUBFT_MODE=byzantine），握手后崩溃
+#   Node 0, 1, 2 = 诚实节点
+#
+# 场景 2: 投票 0 拜占庭
+#   改 Node 3 的 TRUBFT_MODE 为 byzantine-vote
+#   节点正常参与但始终投 0
 
 services:
-  # 诚实节点 0
+  # --- 诚实节点 ---
   trubft-node-0:
     image: trubft:TruBFT
     volumes:
@@ -25,7 +31,6 @@ services:
       - trubft-node-2
       - trubft-node-3
 
-  # 诚实节点 1
   trubft-node-1:
     image: trubft:TruBFT
     volumes:
@@ -44,7 +49,6 @@ services:
       - trubft-node-2
       - trubft-node-3
 
-  # 诚实节点 2
   trubft-node-2:
     image: trubft:TruBFT
     volumes:
@@ -62,14 +66,21 @@ services:
     depends_on:
       - trubft-node-3
 
-  # 拜占庭节点 3（握手后崩溃）
+  # --- 拜占庭节点 ---
+  # 场景 1: 崩溃（byzantine）- 握手后立即退出
+  # 场景 2: 投票 0（byzantine-vote）- 始终投 0 不崩溃
   trubft-node-3:
     image: trubft:TruBFT
     volumes:
       - .:/app
     working_dir: /app
     environment:
+      # ★ 切换拜占庭类型：byzantine（崩溃）或 byzantine-vote（投0）
       - TRUBFT_MODE=byzantine
       - TRUBFT_N=4
       - TRUBFT_T=1
+      - TRUBFT_B=100
+      - TRUBFT_TX=-1
       - TRUBFT_MY_ID=3
+      - TRUBFT_VERSION=1
+      - TRUBFT_DELAY=50

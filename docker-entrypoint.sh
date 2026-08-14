@@ -69,7 +69,7 @@ if [ "$TRUBFT_MODE" = "distributed" ]; then
         --my-id "$MY_ID"
 fi
 
-# Byzantine模式（崩溃节点：握手后立即退出）
+# Byzantine模式-崩溃（握手后立即退出）
 if [ "$TRUBFT_MODE" = "byzantine" ]; then
     MY_ID=${TRUBFT_MY_ID:-0}
     
@@ -80,6 +80,27 @@ if [ "$TRUBFT_MODE" = "byzantine" ]; then
         -c "$ENC_FILE" \
         -s hosts \
         -n "$N" \
+        --my-id "$MY_ID"
+fi
+
+# Byzantine模式-投票0（始终投0，不排除崩溃）
+if [ "$TRUBFT_MODE" = "byzantine-vote" ]; then
+    MY_ID=${TRUBFT_MY_ID:-0}
+    VERSION=${TRUBFT_VERSION:-1}
+    DELAY=${TRUBFT_DELAY:-50}
+    
+    echo "TruBFT Byzantine-Vote N=$N Node=$MY_ID (always vote 0)" >&2
+    exec python3 -m adaptive.test.byzantine_vote_test \
+        -k "$KEYS_FILE" \
+        -e "$ECDSA_FILE" \
+        -c "$ENC_FILE" \
+        -s hosts \
+        -n "$N" \
+        -t "$T" \
+        -b "$B" \
+        -x "$TX" \
+        -v "$VERSION" \
+        -a "$DELAY" \
         --my-id "$MY_ID"
 fi
 
