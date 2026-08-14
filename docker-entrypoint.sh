@@ -69,4 +69,18 @@ if [ "$TRUBFT_MODE" = "distributed" ]; then
         --my-id "$MY_ID"
 fi
 
+# Byzantine模式（崩溃节点：握手后立即退出）
+if [ "$TRUBFT_MODE" = "byzantine" ]; then
+    MY_ID=${TRUBFT_MY_ID:-0}
+    
+    echo "TruBFT Byzantine N=$N Node=$MY_ID (crash after handshake)" >&2
+    exec python3 -m adaptive.test.byzantine_party_test \
+        -k "$KEYS_FILE" \
+        -e "$ECDSA_FILE" \
+        -c "$ENC_FILE" \
+        -s hosts \
+        -n "$N" \
+        --my-id "$MY_ID"
+fi
+
 exec "$@"
